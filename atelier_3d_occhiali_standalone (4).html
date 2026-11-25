@@ -1,0 +1,1496 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Atelier 3D Occhiali | OJO Milano</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,600;1,400&display=swap" rel="stylesheet">
+
+  <!-- Three.js & OrbitControls -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            serif: ['"Playfair Display"', 'serif'],
+          },
+          colors: {
+            brand: {
+              gold: '#D4AF37',
+              goldHover: '#B8952E',
+              darkBg: '#0b0c10',
+              panelBg: '#13151b',
+              panelBorder: '#262933',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Custom Scrollbar for Controls */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(15, 17, 23, 0.6);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(212, 175, 55, 0.3);
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(212, 175, 55, 0.6);
+    }
+
+    .glass-panel {
+      background: rgba(19, 21, 27, 0.85);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .active-tab {
+      color: #D4AF37;
+      border-bottom: 2px solid #D4AF37;
+    }
+
+    /* Range slider custom styling */
+    input[type=range] {
+      -webkit-appearance: none;
+      background: #232733;
+      border-radius: 4px;
+      height: 6px;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      height: 16px;
+      width: 16px;
+      border-radius: 50%;
+      background: #D4AF37;
+      cursor: pointer;
+      box-shadow: 0 0 8px rgba(212, 175, 55, 0.5);
+      transition: transform 0.1s ease;
+    }
+    input[type=range]::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
+    }
+
+    .btn-select-card {
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .btn-select-card.selected {
+      border-color: #D4AF37;
+      background-color: rgba(212, 175, 55, 0.12);
+      box-shadow: 0 0 12px rgba(212, 175, 55, 0.15);
+    }
+  
+.no-scrollbar{scrollbar-width:none}.no-scrollbar::-webkit-scrollbar{display:none}
+.swatch.selected{box-shadow:0 0 0 2px #0b0c10,0 0 0 4px #D4AF37}
+</style>
+
+</head>
+<body class="bg-brand-darkBg text-slate-100 font-sans overflow-hidden select-none h-[100dvh] w-screen flex flex-col">
+
+  <!-- TOP BAR / HEADER -->
+  <header class="h-16 border-b border-brand-panelBorder bg-brand-panelBg/90 backdrop-blur px-4 md:px-6 flex items-center justify-between z-20 shrink-0">
+    <div class="flex items-center space-x-3">
+      <!-- OJO Logo Badge -->
+      <div class="w-10 h-10 rounded-full bg-black border border-brand-gold flex items-center justify-center font-bold text-white shadow-md">
+        <span class="tracking-tighter text-sm font-serif">O<span class="text-brand-gold">J</span>O</span>
+      </div>
+      <div>
+        <h1 class="text-lg font-bold tracking-tight text-white flex items-center gap-2">
+          ATELIER 3D <span class="text-xs font-semibold px-2 py-0.5 rounded bg-brand-gold/20 text-brand-gold border border-brand-gold/40">CONFIGURATORE</span>
+        </h1>
+        <p class="text-xs text-slate-400 hidden sm:block">Progetta il tuo occhiale sartoriale su misura | OJO Milano</p>
+      </div>
+    </div>
+
+    <!-- Quick Controls & Actions Header -->
+    <div class="flex items-center space-x-2 md:space-x-3">
+      <!-- Preset Quick Dropdown / Buttons -->
+      <button onclick="randomizeEyewear()" class="px-3 py-1.5 rounded-lg bg-gradient-to-r from-amber-500/20 to-yellow-600/20 border border-brand-gold/50 text-brand-gold text-xs font-semibold hover:from-amber-500/30 hover:to-yellow-600/30 transition flex items-center gap-2 shadow-lg">
+        <i class="fa-solid font-bold fa-dice text-sm"></i>
+        <span class="hidden md:inline">Genera Casuale</span>
+      </button>
+
+      <!-- Screenshot PNG -->
+      <button onclick="takeScreenshot()" title="Salva Immagine High-Res" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs border border-slate-700 transition flex items-center gap-1.5">
+        <i class="fa-solid fa-camera text-sm"></i>
+        <span class="hidden lg:inline text-xs">Cattura</span>
+      </button>
+
+      <!-- Studio Lighting Switcher -->
+      <div class="hidden sm:flex bg-slate-900 p-1 rounded-lg border border-slate-800 text-xs">
+        <button onclick="setStudioEnv('light')" class="px-2 py-1 rounded text-slate-400 hover:text-white transition" id="envBtn-light" title="Studio Chiaro"><i class="fa-solid fa-sun"></i></button>
+        <button onclick="setStudioEnv('dark')" class="px-2 py-1 rounded bg-slate-800 text-brand-gold font-bold shadow" id="envBtn-dark" title="Showroom Scuro"><i class="fa-solid fa-moon"></i></button>
+        <button onclick="setStudioEnv('warm')" class="px-2 py-1 rounded text-slate-400 hover:text-white transition" id="envBtn-warm" title="Luce Calda"><i class="fa-solid fa-fire"></i></button>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN APP CONTAINER (3D Viewport + Right Control Panel) -->
+  <div class="flex-1 flex flex-col lg:flex-row overflow-hidden relative">
+
+    <!-- 3D VIEWPORT CONTAINER -->
+    <div class="flex-1 relative bg-gradient-to-b from-slate-950 via-slate-900 to-black overflow-hidden flex items-center justify-center" id="viewport-container">
+      
+      <!-- Canvas Canvas Element -->
+      <canvas id="webgl-canvas" class="w-full h-full cursor-grab active:cursor-grabbing block outline-none"></canvas>
+
+      <!-- Overlay Floating Controls (Camera Presets & Toggles) -->
+      <div class="absolute bottom-4 left-4 right-4 lg:right-auto flex flex-wrap items-center justify-between lg:justify-start gap-2 z-10 pointer-events-none">
+        
+        <div class="flex items-center gap-1.5 bg-slate-900/80 backdrop-blur-md p-1.5 rounded-xl border border-slate-700/60 pointer-events-auto shadow-xl">
+          <span class="text-[10px] uppercase font-bold text-slate-400 px-2 hidden sm:inline">Vista:</span>
+          <button onclick="setCameraPreset('threequarter')" class="px-2.5 py-1 text-xs rounded-lg bg-slate-800/90 text-slate-200 hover:bg-brand-gold hover:text-black transition">3/4</button>
+          <button onclick="setCameraPreset('front')" class="px-2.5 py-1 text-xs rounded-lg bg-slate-800/90 text-slate-200 hover:bg-brand-gold hover:text-black transition">Frontale</button>
+          <button onclick="setCameraPreset('side')" class="px-2.5 py-1 text-xs rounded-lg bg-slate-800/90 text-slate-200 hover:bg-brand-gold hover:text-black transition">Profilo</button>
+          <button onclick="setCameraPreset('bridge')" class="px-2.5 py-1 text-xs rounded-lg bg-slate-800/90 text-slate-200 hover:bg-brand-gold hover:text-black transition">Ponte</button>
+        </div>
+
+        <div class="flex items-center gap-2 pointer-events-auto">
+          <!-- Auto Rotate Toggle -->
+          <button id="btn-autorotate" onclick="toggleAutoRotate()" class="px-3 py-1.5 rounded-xl bg-slate-900/80 backdrop-blur-md border border-slate-700/60 text-slate-300 text-xs hover:border-brand-gold transition flex items-center gap-2 shadow-xl">
+            <i class="fa-solid fa-arrows-spin text-brand-gold"></i>
+            <span>Auto-Rotazione</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Live Dimension Info Overlay -->
+      <div class="absolute top-4 left-4 bg-slate-900/70 backdrop-blur-md border border-slate-800/80 px-3 py-2 rounded-lg text-xs font-mono text-slate-300 z-10 hidden sm:block">
+        <div class="text-[10px] text-brand-gold font-sans font-bold uppercase tracking-wider mb-0.5">Specifiche Calibro</div>
+        <div class="flex gap-3">
+          <span id="spec-size">52▢18 - 145</span> | <span id="spec-shape" class="text-slate-100 font-semibold">Wayfarer</span>
+        </div>
+      </div>
+
+      <!-- Toast Notification Alert -->
+      <div id="toast" class="absolute top-4 right-4 bg-brand-gold text-black px-4 py-2 rounded-lg text-xs font-bold shadow-2xl transition transform translate-y-[-100px] opacity-0 z-30 flex items-center gap-2">
+        <i class="fa-solid fa-circle-check"></i>
+        <span id="toast-text">Messaggio</span>
+      </div>
+    </div>
+
+    <!-- RIGHT CONFIGURATOR PANEL -->
+    <div class="w-full lg:w-[450px] xl:w-[480px] bg-brand-panelBg border-t lg:border-t-0 lg:border-l border-brand-panelBorder flex flex-col h-[50vh] lg:h-full z-20 shadow-2xl shrink-0">
+      
+      <div id="tabnav" class="flex border-b border-brand-panelBorder bg-slate-950/60 overflow-x-auto no-scrollbar shrink-0"></div>
+      <div id="tabbody" class="flex-1 overflow-y-auto p-4 md:p-5"></div>
+
+      <!-- FOOTER SUMMARY & ORDER SIMULATION -->
+      <div class="p-4 border-t border-brand-panelBorder bg-slate-950/80 flex items-center justify-between shrink-0">
+        <div>
+          <div class="text-[10px] text-slate-400 uppercase tracking-wider">Stima Modello Unico</div>
+          <div id="price" class="text-lg font-bold text-brand-gold font-serif">€ 240,00</div>
+        </div>
+        <button onclick="showOrderToast()" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-brand-gold to-yellow-600 hover:from-yellow-500 hover:to-amber-600 text-black font-bold text-xs shadow-lg transition flex items-center gap-2">
+          <i class="fa-solid fa-gem"></i>
+          <span>Salva Progetto OJO</span>
+        </button>
+      </div>
+
+    </div>
+
+  </div>
+
+  <script>
+const C = hex => new THREE.Color(hex).convertSRGBToLinear();
+
+    // =========================================================================
+    // GLOBAL STATE & DATA DEFINITIONS
+    // =========================================================================
+    const state = {
+      shape: 'wayfarer',          // wayfarer, aviator, moscot, panthos, tondi, ovali, rect, cateye
+      construction: 'full',       // full, half, rimless
+      bridge: 'saddle',           // saddle, keyhole, double, metal_pads, flattop
+      lensWidth: 52,              // mm
+      lensHeight: 42,             // mm
+      bridgeWidth: 18,            // mm
+      thickness: 4.0,             // mm
+      templeStyle: 'curved',      // straight, curved, vintage, thin_metal, sport
+      syncMaterials: true,
+      frontMaterial: 'acetate_black',
+      templeMaterial: 'acetate_black',
+      lensType: 'sun_solid',      // vista, sun_solid, gradient, mirror, photochromic
+      lensColor: 'g15',           // smoke, g15, sepia, ocean, amber, pink, purple, mirror_silver, mirror_gold, mirror_blue
+      lensOpacity: 75,            // %
+      photoUV: 30,                // %
+      engravingText: 'OJO MILANO',
+      engravingColor: '#D4AF37',
+      lensLaser: true,
+      rivets: 'double_dot',       // none, double_dot, triple_dot, shield, bar
+      autoRotate: false,
+      env: 'dark',
+      bridgeMaterial: 'acetate_black', tipMaterial: 'acetate_black',
+      frameWrap: 10, bridgeY: 0, edgeFront: 15, edgeBridge: 15, edgeTemple: 15, lower: 'same', lowerMaterial: 'metal_silver', lowerCut: -16, lowerThick: 1, strap: 'none', strapMaterial: 'rubber_black', strapWidth: 25, frameDepth: 100, templeW: 100, templeProf: null, customPts: null, customW: null, templeLength: 145, templeSplay: 0, activePart: 'front'
+    };
+
+    // Material definitions for 3D PBR
+    const MATERIALS_DB = {
+      // Glossy Acetates
+      acetate_black: { name: 'Nero Lucido', type: 'acetate', color: 0x0a0a0a, roughness: 0.1, metalness: 0.05, clearcoat: 1.0 },
+      acetate_bordeaux: { name: 'Rosso Bordeaux', type: 'acetate', color: 0x580a14, roughness: 0.15, metalness: 0.05, clearcoat: 1.0 },
+      acetate_navy: { name: 'Blu Notte', type: 'acetate', color: 0x0b192e, roughness: 0.12, metalness: 0.05, clearcoat: 1.0 },
+      acetate_forest: { name: 'Verde Bosco', type: 'acetate', color: 0x0d2818, roughness: 0.15, metalness: 0.05, clearcoat: 1.0 },
+      acetate_ivory: { name: 'Bianco Avorio', type: 'acetate', color: 0xf0efe9, roughness: 0.2, metalness: 0.0, clearcoat: 0.8 },
+      acetate_pink: { name: 'Rosa Cipria', type: 'acetate', color: 0xe8b4b8, roughness: 0.2, metalness: 0.0, clearcoat: 0.9 },
+
+      // Tortoiseshell (Procedural Canvas Generated)
+      tortoise_classic: { name: 'Havana Classico', type: 'tortoise', baseColor: '#964B00', spotColor: '#1a0d00' },
+      tortoise_honey: { name: 'Miele Ambra', type: 'tortoise', baseColor: '#D4A359', spotColor: '#3A2000' },
+      tortoise_dark: { name: 'Tartaruga Scuro', type: 'tortoise', baseColor: '#4A2511', spotColor: '#050200' },
+
+      // Crystal / Translucent
+      crystal_clear: { name: 'Cristallo Chiaro', type: 'crystal', color: 0xffffff, opacity: 0.45, roughness: 0.05, transmission: 0.85 },
+      crystal_champagne: { name: 'Champagne', type: 'crystal', color: 0xf4e3b1, opacity: 0.55, roughness: 0.08, transmission: 0.75 },
+      crystal_smoke: { name: 'Fumo Trasparente', type: 'crystal', color: 0x666666, opacity: 0.6, roughness: 0.1, transmission: 0.65 },
+      crystal_sage: { name: 'Verde Salvia', type: 'crystal', color: 0x8a9a86, opacity: 0.5, roughness: 0.08, transmission: 0.75 },
+
+      // Matte Acetate
+      matte_black: { name: 'Nero Opaco', type: 'acetate', color: 0x121212, roughness: 0.7, metalness: 0.0, clearcoat: 0.0 },
+      matte_slate: { name: 'Grigio Ardesia', type: 'acetate', color: 0x3a3f47, roughness: 0.65, metalness: 0.0, clearcoat: 0.0 },
+      matte_olive: { name: 'Verde Oliva', type: 'acetate', color: 0x3b4234, roughness: 0.65, metalness: 0.0, clearcoat: 0.0 },
+
+      // Metals
+      metal_gold: { name: 'Oro Giallo 18k', type: 'metal', color: 0xd4af37, roughness: 0.15, metalness: 0.95 },
+      metal_rosegold: { name: 'Oro Rosa', type: 'metal', color: 0xb76e79, roughness: 0.18, metalness: 0.92 },
+      metal_silver: { name: 'Argento Lucido', type: 'metal', color: 0xe5e5e5, roughness: 0.1, metalness: 0.98 },
+      metal_gunmetal: { name: 'Titanio Canna Fucile', type: 'metal', color: 0x4a4d52, roughness: 0.25, metalness: 0.88 },
+      metal_bronze: { name: 'Bronzo Antico', type: 'metal', color: 0x8c6239, roughness: 0.35, metalness: 0.85 },
+      steel_inox: { name: 'Acciaio Inox', type: 'metal', color: 0xc9ced4, roughness: 0.28, metalness: 1.0 },
+      titanium_raw: { name: 'Titanio Grezzo', type: 'metal', color: 0x9a9da3, roughness: 0.45, metalness: 0.95 },
+      copper: { name: 'Rame', type: 'metal', color: 0xb87333, roughness: 0.25, metalness: 0.95 },
+
+      // Naturali e tecnici (texture procedurali)
+      wood_walnut: { name: 'Legno Noce', type: 'wood', baseColor: '#5b3a22', spotColor: '#2a160a' },
+      wood_maple: { name: 'Legno Acero', type: 'wood', baseColor: '#d9b988', spotColor: '#9a7040' },
+      wood_ebony: { name: 'Legno Ebano', type: 'wood', baseColor: '#1e1713', spotColor: '#050403' },
+      wood_bamboo: { name: 'Bambù', type: 'wood', baseColor: '#c9a96a', spotColor: '#6e5420' },
+      bone_ivory: { name: 'Osso Naturale', type: 'bone', baseColor: '#e9e0cc', spotColor: '#8a7a5a' },
+      bone_dark: { name: 'Osso Brunito', type: 'bone', baseColor: '#7a5f3e', spotColor: '#2b1d10' },
+      horn_buffalo: { name: 'Corno di Bufalo', type: 'horn', baseColor: '#3a2a1e', spotColor: '#0a0604' },
+      horn_blonde: { name: 'Corno Biondo', type: 'horn', baseColor: '#c8964a', spotColor: '#5a3410' },
+      rubber_black: { name: 'Silicone Nero', type: 'rubber', color: 0x161616, roughness: 0.85, metalness: 0 },
+      rubber_grey: { name: 'Silicone Grigio', type: 'rubber', color: 0x6b6f75, roughness: 0.85, metalness: 0 },
+      neoprene_blue: { name: 'Neoprene Blu', type: 'rubber', color: 0x1d3f7a, roughness: 0.95, metalness: 0 },
+      rubber_red: { name: 'Silicone Rosso', type: 'rubber', color: 0xb3262d, roughness: 0.85, metalness: 0 },
+      rubber_lime: { name: 'Silicone Lime', type: 'rubber', color: 0x9acb1f, roughness: 0.85, metalness: 0 },
+      carbon_fiber: { name: 'Fibra di Carbonio', type: 'carbon', baseColor: '#151517', spotColor: '#000000' }
+    };
+
+    const LENS_COLORS_DB = {
+      smoke: { name: 'Grigio Fumo', color: 0x22252a },
+      g15: { name: 'Verde G-15', color: 0x1e3024 },
+      sepia: { name: 'Marrone Seppia', color: 0x422617 },
+      ocean: { name: 'Blu Oceano', color: 0x102a45 },
+      amber: { name: 'Ambra Guida', color: 0xb57c1e },
+      pink: { name: 'Rosa Tramonto', color: 0xa83b6b },
+      purple: { name: 'Viola Deep', color: 0x3d1c47 },
+      sport_blue: { name: 'Blu Sport', color: 0x1f5fa8 },
+      sport_lime: { name: 'Lime Contrasto', color: 0xa6c21a },
+      mirror_silver: { name: 'Specchio Argento', color: 0xd9d9d9, mirror: true },
+      mirror_gold: { name: 'Specchio Oro', color: 0xdfb750, mirror: true },
+      mirror_blue: { name: 'Specchio Blu', color: 0x1e88e5, mirror: true }
+    };
+
+
+</script>
+  <script>
+    // =========================================================================
+    // THREE.JS SETUP & SCENE GLOBALS
+    // =========================================================================
+    let scene, camera, renderer, controls;
+    let eyewearGroup; // Main container for all 3D mesh components
+    let studioLightKey, studioLightFill, studioLightRim;
+    let proceduralTextures = {};
+
+    // 3D Sub-meshes references for dynamic updates
+    let frontMesh = null;
+    let leftTempleMesh = null;
+    let rightTempleMesh = null;
+    let bridgeMesh = null;
+    let leftLensMesh = null;
+    let rightLensMesh = null;
+    let rivetsGroup = null;
+    let engravingMesh = null;
+
+    window.onload = function() {
+      initThreeJS();
+      generateProceduralTextures();
+      generateMaterialTextures();
+      initUI();
+      buildEyewear3D();
+      animate();
+    };
+
+    // =========================================================================
+    // THREE.JS INITIALIZATION
+    // =========================================================================
+    function initThreeJS() {
+      const container = document.getElementById('viewport-container');
+      const canvas = document.getElementById('webgl-canvas');
+
+      // Scene
+      scene = new THREE.Scene();
+      scene.background = C(0x0b0c10);
+
+      // Camera
+      camera = new THREE.PerspectiveCamera(35, container.clientWidth / container.clientHeight, 0.1, 100);
+      camera.position.set(0, 5, 22);
+
+      // Renderer
+      renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: false, preserveDrawingBuffer: true });
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.setSize(container.clientWidth, container.clientHeight);
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      renderer.outputEncoding = THREE.sRGBEncoding;
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      renderer.toneMappingExposure = 1.1;
+
+      // OrbitControls
+      controls = new THREE.OrbitControls(camera, renderer.domElement);
+      controls.enableDamping = true;
+      controls.dampingFactor = 0.05;
+      controls.maxDistance = 45;
+      controls.minDistance = 8;
+      controls.target.set(0, 0, 0);
+
+      // Lights Studio Setup
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.25);
+      scene.add(ambientLight);
+
+      studioLightKey = new THREE.DirectionalLight(0xfff5ea, 1.8);
+      studioLightKey.position.set(12, 18, 15);
+      studioLightKey.castShadow = true;
+      studioLightKey.shadow.mapSize.width = 2048;
+      studioLightKey.shadow.mapSize.height = 2048;
+      Object.assign(studioLightKey.shadow.camera, { left: -12, right: 12, top: 12, bottom: -12 });
+      studioLightKey.shadow.bias = -0.0005;
+      scene.add(studioLightKey);
+
+      studioLightFill = new THREE.DirectionalLight(0xdbeafe, 1.0);
+      studioLightFill.position.set(-15, 10, -10);
+      scene.add(studioLightFill);
+
+      studioLightRim = new THREE.DirectionalLight(0xffffff, 1.2);
+      studioLightRim.position.set(0, -12, -15);
+      scene.add(studioLightRim);
+
+      // Soft Ground Studio Plane
+      const groundGeo = new THREE.PlaneGeometry(100, 100);
+      const groundMat = new THREE.ShadowMaterial({ opacity: 0.3 });
+      const ground = new THREE.Mesh(groundGeo, groundMat);
+      ground.rotation.x = -Math.PI / 2;
+      ground.position.y = -6;
+      ground.receiveShadow = true;
+      scene.add(ground);
+
+      // Eyewear Container Group
+      eyewearGroup = new THREE.Group();
+      scene.add(eyewearGroup);
+
+      // Responsive Resize Listener
+      buildEnvironment();
+      new ResizeObserver(onWindowResize).observe(container);
+    }
+
+    function onWindowResize() {
+      const container = document.getElementById('viewport-container');
+      if (!container.clientWidth || !container.clientHeight) return;
+      camera.aspect = container.clientWidth / container.clientHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(container.clientWidth, container.clientHeight);
+    }
+
+    function animate() {
+      requestAnimationFrame(animate);
+      
+      if (state.autoRotate && eyewearGroup) {
+        eyewearGroup.rotation.y += 0.008;
+      }
+      
+      controls.update();
+      renderer.render(scene, camera);
+    }
+
+    // =========================================================================
+    // PROCEDURAL TEXTURES (Tortoiseshell & Engravings)
+    // =========================================================================
+    function generateProceduralTextures() {
+      // 1. Tortoiseshell Canvas Texture Generator
+      ['tortoise_classic', 'tortoise_honey', 'tortoise_dark'].forEach(key => {
+        const matData = MATERIALS_DB[key];
+        const canvas = document.createElement('canvas');
+        canvas.width = 512;
+        canvas.height = 512;
+        const ctx = canvas.getContext('2d');
+
+        ctx.fillStyle = matData.baseColor;
+        ctx.fillRect(0, 0, 512, 512);
+
+        // Organic dark spots
+        ctx.fillStyle = matData.spotColor;
+        for (let i = 0; i < 400; i++) {
+          const x = Math.random() * 512;
+          const y = Math.random() * 512;
+          const r = 5 + Math.random() * 25;
+          ctx.beginPath();
+          ctx.ellipse(x, y, r, r * (0.3 + Math.random() * 0.7), Math.random() * Math.PI, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.encoding = THREE.sRGBEncoding;
+        texture.wrapS = THREE.RepeatWrapping;
+        texture.wrapT = THREE.RepeatWrapping;
+        texture.repeat.set(0.4, 0.4);
+        proceduralTextures[key] = texture;
+      });
+    }
+
+    function generateEngravingTexture(text, color) {
+      const canvas = document.createElement('canvas');
+      canvas.width = 512;
+      canvas.height = 64;
+      const ctx = canvas.getContext('2d');
+
+      ctx.clearRect(0, 0, 512, 64);
+      ctx.fillStyle = color || state.engravingColor;
+      ctx.font = 'bold 26px "Plus Jakarta Sans", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(text.toUpperCase(), 256, 32);
+
+      const tex = new THREE.CanvasTexture(canvas);
+      tex.encoding = THREE.sRGBEncoding;
+      tex.needsUpdate = true;
+      return tex;
+    }
+
+
+    // Ambiente da studio procedurale (softbox) → riflessi su metalli, acetato e lenti
+    function buildEnvironment() {
+      const pm = new THREE.PMREMGenerator(renderer), es = new THREE.Scene();
+      es.background = new THREE.Color(0x15171c);
+      const box = (c, i, x, y, z, sx, sy) => {
+        const m = new THREE.Mesh(new THREE.PlaneGeometry(sx, sy), new THREE.MeshBasicMaterial({ color: new THREE.Color(c).multiplyScalar(i), side: THREE.DoubleSide }));
+        m.position.set(x, y, z); m.lookAt(0, 0, 0); es.add(m);
+      };
+      box(0xffffff, 6, 0, 12, 6, 14, 8); box(0xfff0dd, 4, -12, 3, 8, 6, 10);
+      box(0xcfe0ff, 3, 12, 2, -6, 6, 10); box(0xffffff, 2.5, 0, -4, -12, 16, 4);
+      scene.environment = pm.fromScene(es, 0.04).texture;
+      pm.dispose();
+    }
+
+    // Texture procedurali: legno, osso, corno, carbonio
+    function generateMaterialTextures() {
+      const R = Math.random;
+      const rgba = (h, a) => `rgba(${parseInt(h.slice(1, 3), 16)},${parseInt(h.slice(3, 5), 16)},${parseInt(h.slice(5, 7), 16)},${a})`;
+      Object.entries(MATERIALS_DB).forEach(([key, m]) => {
+        if (!['wood', 'bone', 'horn', 'carbon'].includes(m.type)) return;
+        const c = document.createElement('canvas'); c.width = c.height = 512;
+        const x = c.getContext('2d');
+        x.fillStyle = m.baseColor; x.fillRect(0, 0, 512, 512);
+        if (m.type === 'wood') {
+          for (let i = 0; i < 260; i++) {
+            const y = R() * 512; x.strokeStyle = rgba(m.spotColor, 0.06 + R() * 0.2); x.lineWidth = 0.5 + R() * 2.5;
+            x.beginPath(); x.moveTo(0, y);
+            for (let px = 0; px <= 512; px += 32) x.lineTo(px, y + Math.sin(px * 0.015 + i) * 4 + R() * 1.5);
+            x.stroke();
+          }
+        } else if (m.type === 'bone') {
+          for (let i = 0; i < 700; i++) { x.fillStyle = rgba(m.spotColor, 0.1 + R() * 0.2); x.beginPath(); x.arc(R() * 512, R() * 512, 0.6 + R() * 1.2, 0, 7); x.fill(); }
+          for (let i = 0; i < 120; i++) { x.strokeStyle = rgba(m.spotColor, 0.08); x.beginPath(); const px = R() * 512, py = R() * 512; x.moveTo(px, py); x.lineTo(px + 40 + R() * 60, py + R() * 4); x.stroke(); }
+        } else if (m.type === 'horn') {
+          for (let i = 0; i < 60; i++) {
+            x.save(); x.translate(R() * 512, R() * 512); x.rotate(0.2);
+            x.fillStyle = rgba(m.spotColor, 0.12 + R() * 0.25); x.beginPath(); x.ellipse(0, 0, 60 + R() * 140, 4 + R() * 18, 0, 0, 7); x.fill(); x.restore();
+          }
+        } else {
+          for (let i = 0; i < 512; i += 16) for (let j = 0; j < 512; j += 16) {
+            const on = ((i + j) / 16) % 2 === 0;
+            x.fillStyle = on ? '#1c1c1f' : '#0b0b0c'; x.fillRect(i, j, 16, 16);
+            x.fillStyle = 'rgba(255,255,255,0.06)'; on ? x.fillRect(i, j, 16, 3) : x.fillRect(i, j, 3, 16);
+          }
+        }
+        const t = new THREE.CanvasTexture(c);
+        t.encoding = THREE.sRGBEncoding; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 4;
+        t.repeat.set(m.type === 'carbon' ? 2 : 0.4, m.type === 'carbon' ? 2 : 0.4);
+        proceduralTextures[key] = t;
+      });
+    }
+
+</script>
+  <script>
+// =========================================================================
+// GEOMETRIA ORGANICA: contorni a spline, bordi a sezione variabile,
+// ponte e aste per "sweep", curvatura frontale (wrap), lenti bombate
+// =========================================================================
+const V3 = (x, y, z) => new THREE.Vector3(x, y, z);
+const SHAPES = { // fallback superellittico per le forme "geometriche" (tondi, ovali, ...)
+  wayfarer: {}, aviator: {}, cateye: {}, panthos: {}, boston: {},
+  moscot: { n: 2.5, hs: 1 }, tondi: { n: 2, round: true }, ovali: { n: 2.1, hs: 0.8 },
+  rect: { n: 4.5, hs: 0.74 }, wellington: { n: 3.4, hs: 0.88, taper: 0.06 }, sport: { n: 2.6, hs: 0.74, taper: -0.05, lift: 0.14 }
+};
+// Contorni disegnati a mano (x: -1 naso … +1 esterno; y: -1 basso … +1 alto), antiorari
+const SHAPE_PTS = {
+  wayfarer: [[1.02,.35],[.9,.85],[.35,1],[-.35,.97],[-.92,.9],[-1,.45],[-.93,-.25],[-.7,-.78],[-.2,-1],[.4,-.97],[.9,-.65],[1.05,-.1]],
+  aviator:  [[.98,.15],[.88,.75],[.35,1],[-.4,.98],[-.95,.75],[-1,.2],[-.9,-.45],[-.55,-.92],[-.1,-1.05],[.4,-.9],[.8,-.5],[.98,-.15]],
+  cateye:   [[1.15,.95],[.55,.82],[-.05,.66],[-.65,.52],[-.98,.2],[-.95,-.4],[-.65,-.85],[-.1,-1],[.45,-.9],[.88,-.5],[1.03,.05],[1.1,.55]],
+  panthos:  [[1,.3],[.85,.8],[.3,.95],[-.3,.95],[-.85,.8],[-1,.3],[-.97,-.35],[-.65,-.85],[0,-1],[.65,-.85],[.97,-.35]],
+  boston:   [[.98,.3],[.82,.82],[.25,.98],[-.4,.95],[-.9,.8],[-1,.3],[-.92,-.35],[-.6,-.85],[0,-1],[.55,-.9],[.9,-.55],[1.02,-.1]]
+};
+
+function lensPoints(type, w, h, count = 140) {
+  let pts;
+  const q = type === 'custom' ? (state.customPts || SHAPE_PTS.wayfarer) : SHAPE_PTS[type];
+  if (q) {
+    const a = w / 2, b = h / 2;
+    const cv = new THREE.CatmullRomCurve3(q.map(([x, y]) => V3(x * a, y * b, 0)), true, 'centripetal');
+    pts = cv.getSpacedPoints(count).slice(0, count).map(v => new THREE.Vector2(v.x, v.y));
+  } else {
+    const p = SHAPES[type] || SHAPES.moscot;
+    const a = p.round ? (w + h) / 4 : w / 2, b = p.round ? a : (h / 2) * (p.hs || 1);
+    pts = [];
+    for (let i = 0; i < count; i++) {
+      const t = (i / count) * Math.PI * 2, c = Math.cos(t), s = Math.sin(t);
+      let x = a * Math.sign(c) * Math.pow(Math.abs(c), 2 / p.n), y = b * Math.sign(s) * Math.pow(Math.abs(s), 2 / p.n);
+      x *= 1 + (p.taper || 0) * (y / b);
+      if (x < 0 && y < 0) x *= 1 - 0.12 * (-y / b);            // scalatura nasale
+      y += (0.04 + (p.lift || 0) * Math.max(0, x / a)) * b * (x / a); // lieve rialzo esterno
+      pts.push(new THREE.Vector2(x, y));
+    }
+  }
+  if (THREE.ShapeUtils.isClockWise(pts)) pts.reverse();
+  return pts;
+}
+
+const normals2D = pts => pts.map((p, i) => {
+  const a = pts[(i + pts.length - 1) % pts.length], c = pts[(i + 1) % pts.length];
+  const t = new THREE.Vector2(c.x - a.x, c.y - a.y).normalize();
+  return new THREE.Vector2(t.y, -t.x); // normale verso l'esterno
+});
+const endCap = (u, s, e) => Math.min(Math.sqrt(Math.min(1, u / s)), Math.sqrt(Math.min(1, (1 - u) / e)));
+
+// Spigolosità: 0 = profilo tondo (n=2), 100 = quasi squadrato (n=10). Le sezioni "tonde" (fili) restano tonde fino al 15%.
+const nSharp = (s, round) => (round ? 2 + Math.max(0, s - 15) * 0.094 : 2 + s * 0.08);
+
+// Sweep: sezione superellittica (a, b) lungo punti P con assi locali A, B.
+// Le normali sono calcolate dal profilo (non mediate): gli spigoli restano netti anche con poche facce.
+function sweepGeo(P, A, B, prof, closed, n = 3.2, seg = 12) {
+  seg = Math.max(seg, n > 5.5 ? 32 : n > 4 ? 22 : 12);
+  const N = P.length, pos = [], nor = [], uv = [], idx = [], e = 2 / n;
+  for (let i = 0; i < N; i++) {
+    const [a0, b0] = prof(i), a = Math.max(a0, 1e-4), b = Math.max(b0, 1e-4);
+    for (let j = 0; j <= seg; j++) {
+      const t = (j / seg) * Math.PI * 2, c = Math.cos(t), s = Math.sin(t);
+      const ux = Math.pow(Math.abs(c), e), uy = Math.pow(Math.abs(s), e), x = a * Math.sign(c) * ux, y = b * Math.sign(s) * uy;
+      pos.push(P[i].x + A[i].x * x + B[i].x * y, P[i].y + A[i].y * x + B[i].y * y, P[i].z + A[i].z * x + B[i].z * y);
+      const gx = Math.sign(c) * Math.pow(ux, n - 1) / a, gy = Math.sign(s) * Math.pow(uy, n - 1) / b;
+      const vx = A[i].x * gx + B[i].x * gy, vy = A[i].y * gx + B[i].y * gy, vz = A[i].z * gx + B[i].z * gy, l = Math.hypot(vx, vy, vz) || 1;
+      nor.push(vx / l, vy / l, vz / l);
+      uv.push((i / N) * 5, (j / seg) * 2.5);
+    }
+  }
+  const va = V3(pos[0], pos[1], pos[2]), vb = V3(pos[3 * (seg + 1)], pos[3 * (seg + 1) + 1], pos[3 * (seg + 1) + 2]), vd = V3(pos[3], pos[4], pos[5]);
+  const flip = vb.clone().sub(va).cross(vd.clone().sub(va)).dot(va.clone().sub(P[0])) < 0;
+  for (let i = 0; i < (closed ? N : N - 1); i++) {
+    const i2 = (i + 1) % N;
+    for (let j = 0; j < seg; j++) {
+      const a = i * (seg + 1) + j, b = i2 * (seg + 1) + j, c = b + 1, d = a + 1;
+      flip ? idx.push(a, d, b, b, d, c) : idx.push(a, b, d, b, c, d);
+    }
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  g.setIndex(idx); g.userData.an = true;
+  return g;
+}
+
+// Curvatura frontale: le estremità si piegano all'indietro (le normali seguono la deformazione)
+function bend(g, K) {
+  const p = g.attributes.position;
+  for (let i = 0; i < p.count; i++) p.setZ(i, p.getZ(i) - K * p.getX(i) * p.getX(i));
+  p.needsUpdate = true;
+  if (g.userData.an) {
+    const nm = g.attributes.normal;
+    for (let i = 0; i < nm.count; i++) {
+      const nx = nm.getX(i) + 2 * K * p.getX(i) * nm.getZ(i), ny = nm.getY(i), nz = nm.getZ(i), l = Math.hypot(nx, ny, nz) || 1;
+      nm.setXYZ(i, nx / l, ny / l, nz / l);
+    }
+    nm.needsUpdate = true;
+  } else g.computeVertexNormals();
+  return g;
+}
+
+function disposeTree(group) {
+  const cached = Object.values(proceduralTextures);
+  while (group.children.length) {
+    const o = group.children[0];
+    group.remove(o);
+    o.traverse(n => {
+      if (n.geometry) n.geometry.dispose();
+      if (n.material) { if (n.material.map && !cached.includes(n.material.map)) n.material.map.dispose(); n.material.dispose(); }
+    });
+  }
+}
+const addMesh = (g, mat, part, shadow = true) => { const m = new THREE.Mesh(g, mat); m.castShadow = shadow; if (part) m.userData.part = part; eyewearGroup.add(m); return m; };
+
+// Visiera sportiva: un'unica lente avvolgente con scalatura nasale al centro
+const SHIELD_PTS = [[1,.1],[.95,.55],[.6,.85],[.15,.9],[-.15,.9],[-.6,.85],[-.95,.55],[-1,.1],[-.92,-.35],[-.6,-.62],[-.25,-.64],[-.1,-.42],[0,-.3],[.1,-.42],[.25,-.64],[.6,-.62],[.92,-.35]];
+
+// x del contorno (lente destra) alla quota y: pick = Math.min (interno) o Math.max (esterno)
+function edgeX(pts, y, pick) {
+  let r = null;
+  for (let i = 0; i < pts.length; i++) {
+    const a = pts[i], b = pts[(i + 1) % pts.length];
+    if ((a.y - y) * (b.y - y) <= 0 && a.y !== b.y) { const x = a.x + (b.x - a.x) * (y - a.y) / (b.y - a.y); r = r === null ? x : pick(r, x); }
+  }
+  return r === null ? pick(...pts.map(p => p.x)) : r;
+}
+
+// Divide il contorno in arco superiore (sopra la quota cut) e arco inferiore, a prescindere dal punto di partenza
+function arcSplit(pts, cut) {
+  const N = pts.length; let k = 0; pts.forEach((p, i) => { if (p.y < pts[k].y) k = i; });
+  const rot = [...pts.keys()].map(i => (i + k) % N), up = rot.filter(i => pts[i].y > cut);
+  if (!up.length) return { up: rot, low: [] };
+  const f = rot.indexOf(up[0]), l = rot.indexOf(up[up.length - 1]);
+  return { up, low: [...rot.slice(l + 1), ...rot.slice(0, f)] };
+}
+
+// Lente bombata con spessore (due superfici + bordo) e UV verticali per le sfumature
+function lensGeo(pts, x0, K) {
+  const R = 7, N = pts.length, T = 0.08, c = pts.reduce((s, p) => s.add(p), new THREE.Vector2()).divideScalar(N);
+  const ys = pts.map(p => p.y), y0 = Math.min(...ys), span = (Math.max(...ys) - y0) || 1;
+  const pos = [x0 + c.x, c.y, 0.09], uv = [0.5, (c.y - y0) / span];
+  for (let r = 1; r <= R; r++) { const s = r / R; pts.forEach(p => { const py = c.y + (p.y - c.y) * s; pos.push(x0 + c.x + (p.x - c.x) * s, py, 0.09 * (1 - s * s)); uv.push(0.5, (py - y0) / span); }); }
+  const nF = pos.length / 3;
+  for (let i = 0; i < nF; i++) { pos.push(pos[3 * i], pos[3 * i + 1], pos[3 * i + 2] - T); uv.push(uv[2 * i], uv[2 * i + 1]); }
+  const ring = r => 1 + (r - 1) * N, idx = [], tri = (a, b, d) => idx.push(a, b, d, a + nF, d + nF, b + nF);
+  for (let i = 0; i < N; i++) tri(0, ring(1) + i, ring(1) + (i + 1) % N);
+  for (let r = 2; r <= R; r++) for (let i = 0; i < N; i++) {
+    const a = ring(r - 1) + i, b = ring(r - 1) + (i + 1) % N, c2 = ring(r) + i, d = ring(r) + (i + 1) % N;
+    tri(a, c2, b); tri(b, c2, d);
+  }
+  for (let i = 0; i < N; i++) { const f0 = ring(R) + i, f1 = ring(R) + (i + 1) % N; idx.push(f0, f0 + nF, f1, f1, f0 + nF, f1 + nF); }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); g.setIndex(idx);
+  return bend(g, K);
+}
+
+// Bordo: sweep lungo il contorno, sezione più spessa in alto e all'angolo esterno
+function rimGeo(pts, x0, rt, depth, half, cut, metal, K, ab) {
+  const N = pts.length, nr = normals2D(pts), side = x0 > 0 ? 1 : -1, wf = weightFn(ab, side);
+  const a = Math.max(...pts.map(p => Math.abs(p.x))), b = Math.max(...pts.map(p => p.y));
+  const idx = half ? arcSplit(pts, cut).up : [...pts.keys()];
+  const P = [], A = [], B = [], WR = [];
+  idx.forEach(i => {
+    const p = pts[i], yn = p.y / b, xn = x0 === 0 ? Math.abs(p.x) / a : (side * p.x) / a;
+    const wr = wf(p) * (metal ? rt : rt * (0.72 + 0.45 * Math.max(0, yn) + 0.4 * Math.pow(Math.max(0, xn), 3) * Math.max(0, yn + 0.3)));
+    WR.push(wr);
+    P.push(V3(x0 + p.x + nr[i].x * wr / 2, p.y + nr[i].y * wr / 2, 0)); A.push(V3(nr[i].x, nr[i].y, 0)); B.push(V3(0, 0, 1));
+  });
+  const M = P.length;
+  const g = sweepGeo(P, A, B, i => { const k = half ? endCap(i / (M - 1), 0.04, 0.04) : 1; return [WR[i] / 2 * k, depth / 2 * k]; }, !half, nSharp(state.edgeFront, metal), 12);
+  return bend(g, K);
+}
+
+// Parte bassa della lente sostenuta da filo di nylon, filo o fascia in un altro materiale
+function addLowerSupport(pts, x, cut, type, D) {
+  const sp = arcSplit(pts, cut);
+  if (!sp.low.length) return;
+  const up = sp.up, ord = [...up.slice(-3), ...sp.low, ...up.slice(0, 3)], t = state.lowerThick / 10;
+  if (type === 'nylon') {
+    addMesh(bend(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(ord.map(i => V3(x + pts[i].x, pts[i].y, 0))), 64, Math.max(0.012, t / 2), 6), D.K),
+      new THREE.MeshStandardMaterial({ color: C(0xdddddd), roughness: 0.4, transparent: true, opacity: 0.7 }), null, false);
+    return;
+  }
+  const nr = normals2D(pts), P = [], A = [], B = [];
+  ord.forEach(i => { P.push(V3(x + pts[i].x + nr[i].x * t / 2, pts[i].y + nr[i].y * t / 2, 0)); A.push(V3(nr[i].x, nr[i].y, 0)); B.push(V3(0, 0, 1)); });
+  const M = P.length, dh = type === 'wire' ? t / 2 : Math.min(D.depth * 0.4, 0.2);
+  const g = sweepGeo(P, A, B, i => { const k = endCap(i / (M - 1), 0.05, 0.05); return [t / 2 * k, dh * k]; }, false, nSharp(state.edgeFront, type === 'wire'), 10);
+  addMesh(bend(g, D.K), getMaterialObject(state.lowerMaterial), 'lower');
+}
+
+// Dimensioni comuni della montatura (usate da geometria e modellatore)
+function frameDims() {
+  const w = state.lensWidth / 10, h = state.lensHeight / 10, bw = state.bridgeWidth / 10, thick = state.thickness / 10;
+  const metal = MATERIALS_DB[state.frontMaterial].type === 'metal', rt = metal ? Math.min(thick, 0.12) : thick, shield = state.construction === 'shield';
+  return { w, h, bw, thick, metal, rt, shield, depth: (metal ? rt : thick * 1.15) * state.frameDepth / 100, K: state.frameWrap * 0.001 * (shield ? 3 : 1), cx: w / 2 + bw / 2 };
+}
+
+function buildEyewear3D() {
+  disposeTree(eyewearGroup);
+  const D = frameDims(), { w, h, bw, rt, depth, metal, K, cx, shield } = D;
+  const frontMat = getMaterialObject(state.frontMaterial), lensMat = getLensMaterial(), silver = getMaterialObject('metal_silver');
+  const zb = x => -K * x * x, cut = (state.lowerCut / 100) * (h / 2);
+  const R = lensPoints(state.shape, w, h), L = R.map(v => new THREE.Vector2(-v.x, v.y)).reverse();
+
+  if (shield) {
+    const a = w + bw / 2, b = h * 0.55;
+    const cv = new THREE.CatmullRomCurve3(SHIELD_PTS.map(([x, y]) => V3(x * a, y * b, 0)), true, 'centripetal');
+    const pts = cv.getSpacedPoints(160).slice(0, 160).map(v => new THREE.Vector2(v.x, v.y));
+    if (THREE.ShapeUtils.isClockWise(pts)) pts.reverse();
+    addMesh(lensGeo(pts, 0, K), lensMat, 'lens', false).renderOrder = 2;
+    addMesh(rimGeo(pts, 0, rt, depth, true, b * 0.25, metal, K, null), frontMat, 'front');
+    const pm = getMaterialObject(state.bridgeMaterial);
+    [-1, 1].forEach(s => { const p = addMesh(new THREE.SphereGeometry(0.14, 12, 10), pm, 'bridge', false); p.scale.set(0.5, 1.2, 0.4); p.position.set(s * 0.6, -b * 0.34, -0.25); });
+  } else {
+    [[-cx, L], [cx, R]].forEach(([x, pts]) => {
+      addMesh(lensGeo(pts, x, K), lensMat, 'lens', false).renderOrder = 2;
+      if (state.construction === 'rimless') return;
+      const lowerT = state.construction === 'half' && state.lower === 'same' ? 'nylon' : state.lower, open = lowerT !== 'same';
+      addMesh(rimGeo(pts, x, rt, depth, open, cut, metal, K, [w / 2, h / 2]), frontMat, 'front');
+      if (open) addLowerSupport(pts, x, cut, lowerT, D);
+    });
+    if (state.construction === 'rimless') {
+      const pin = new THREE.CylinderGeometry(0.07, 0.07, 0.3, 12); pin.rotateX(Math.PI / 2);
+      [-1, 1].forEach(s => [cx + edgeX(R, h * 0.2, Math.min), cx + edgeX(R, h * 0.2, Math.max)].forEach(px => { const m = addMesh(pin, silver, null, false); m.position.set(s * px, h * 0.2, zb(px)); }));
+    }
+    if (state.lensLaser) {
+      const mat = new THREE.MeshBasicMaterial({ map: generateEngravingTexture('OJO', 'rgba(255,255,255,0.7)'), transparent: true, opacity: 0.6, depthWrite: false });
+      const lx = cx + w * 0.28, laser = addMesh(new THREE.PlaneGeometry(0.7, 0.27), mat, null, false);
+      laser.position.set(-lx, h * 0.3, 0.07 + zb(lx)); laser.rotation.y = -K * 2 * lx; laser.renderOrder = 3;
+    }
+    buildBridge3D(D, R);
+    buildRivets3D(w, h, bw, rt, depth, cx, K);
+  }
+  const tips = buildTemples3D(templeInfo(), silver, frontMat);
+  buildStrap(tips);
+
+  document.getElementById('spec-size').innerText = `${Math.round(state.lensWidth)}▢${Math.round(state.bridgeWidth)} - ${state.templeLength}`;
+  document.getElementById('spec-shape').innerText = shield ? 'SPORT' : state.shape.toUpperCase();
+  if (typeof buildHandles === 'function') buildHandles();
+  if (typeof syncUI === 'function') { syncUI(); updatePrice(); }
+}
+
+// Ponte: arco sweppato le cui estremità finiscono dentro il bordo, alla quota esatta di attacco
+function buildBridge3D(D, R) {
+  const { h, bw, rt, depth, metal, cx, K } = D, b = h / 2, t = state.bridge, mat = getMaterialObject(state.bridgeMaterial);
+  const rw = y => (metal ? rt : rt * (0.72 + 0.45 * Math.max(0, y / b)));
+  const half = y => Math.max(0.1, cx + edgeX(R, y, Math.min) - rw(y) * 0.5);
+  const mk = (ys0, lift, aY, bZ, n) => {
+    const ys = ys0 + state.bridgeY * h, e = half(ys); n = nSharp(state.edgeBridge, n <= 2);
+    const cv = new THREE.CatmullRomCurve3([[-e, ys, 0], [-e * 0.5, ys + lift * 0.8, 0], [0, ys + lift, 0], [e * 0.5, ys + lift * 0.8, 0], [e, ys, 0]].map(p => V3(...p)));
+    const P = cv.getPoints(30), A = P.map(() => V3(0, 1, 0)), B = P.map(() => V3(0, 0, 1));
+    const g = sweepGeo(P, A, B, i => { const ed = Math.pow(Math.abs(i / 30 * 2 - 1), 4); return [aY * (1 + 0.5 * ed), bZ * (1 + 0.3 * ed)]; }, false, n, 12);
+    addMesh(bend(g, K), mat, 'bridge');
+  };
+  const rod = (p1, p2, r) => {
+    const d = p2.clone().sub(p1), m = addMesh(new THREE.CylinderGeometry(r, r, d.length(), 8), mat, 'bridge', false);
+    m.position.copy(p1).add(p2).multiplyScalar(0.5); m.quaternion.setFromUnitVectors(V3(0, 1, 0), d.normalize());
+  };
+  if (t === 'double') { mk(h * 0.34, h * 0.03, 0.06, 0.06, 2); mk(h * 0.1, h * 0.04, 0.055, 0.055, 2); }
+  else if (t === 'bar') mk(h * 0.3, h * 0.01, 0.06, 0.06, 2);
+  else if (t === 'keyhole') mk(h * 0.15, bw * 0.55, rt * 0.22, depth * 0.3, 2.6);
+  else if (t === 'wire') mk(h * 0.18, bw * 0.35, 0.045, 0.045, 2);
+  else if (t === 'flattop') mk(h * 0.3, h * 0.02, rt * 0.45, depth * 0.4, 3.2);
+  else if (t === 'metal_pads') {
+    mk(h * 0.18, bw * 0.35, 0.045, 0.045, 2);
+    const pm = new THREE.MeshPhysicalMaterial({ color: 0xffffff, opacity: 0.65, transparent: true, roughness: 0.2, clearcoat: 1 });
+    const py = -h * 0.12, ey = h * 0.04;
+    [-1, 1].forEach(s => {
+      const p = addMesh(new THREE.SphereGeometry(0.14, 16, 12), pm, 'bridge', false); p.scale.set(0.45, 1.1, 0.35);
+      const px = s * (half(py) - 0.1); p.position.set(px, py, -0.2); p.rotation.z = s * 0.25;
+      rod(V3(s * half(ey), ey, 0), V3(px, py + 0.12, -0.2), 0.025);
+    });
+  } else mk(h * 0.2, h * 0.07, rt * 0.35, depth * 0.38, 3);
+}
+
+// Aste rastremate: alte vicino alla cerniera, più sottili verso l'orecchio
+const TEMPLES = {
+  curved:     { w: 0.10, h0: 0.30, h1: 0.15, bend: 0.72, drop: 2.1 },
+  straight:   { w: 0.10, h0: 0.30, h1: 0.15, bend: 1, drop: 0 },
+  vintage:    { w: 0.16, h0: 0.40, h1: 0.28, bend: 0.75, drop: 2.4 },
+  skinny:     { w: 0.08, h0: 0.18, h1: 0.10, bend: 0.72, drop: 2.1 },
+  wide:       { w: 0.09, h0: 0.42, h1: 0.40, bend: 0.74, drop: 2 },
+  thin_metal: { w: 0.05, h0: 0.05, h1: 0.05, bend: 0.72, drop: 2.1, round: true }
+};
+const TU = [0, 0.25, 0.5, 0.75, 1];
+
+// Semi-altezza della sezione dell'asta lungo u∈[0,1] (stile oppure profilo modellato a mano)
+function tempH(u, T) {
+  const P = state.templeProf;
+  if (!P) { const sm = Math.min(1, u * 1.1); return T.h0 + (T.h1 - T.h0) * sm * sm * (3 - 2 * sm); }
+  const x = Math.min(0.9999, u) * 4, i = Math.floor(x), f = x - i, s = f * f * (3 - 2 * f);
+  return P[i] * (1 - s) + P[i + 1] * s;
+}
+function templeLine(T, L, s) {
+  const D = T.drop, bz = T.bend;
+  const ctrl = D ? [[0, 0, 0], [0, 0, -L * 0.35], [0, 0, -L * bz], [-s * 0.15, -D * 0.25, -L * (bz + (1 - bz) * 0.5)], [-s * 0.35, -D * 0.7, -L * (bz + (1 - bz) * 0.85)], [-s * 0.4, -D, -L]]
+                 : [[0, 0, 0], [0, 0, -L * 0.5], [0, 0, -L]];
+  return new THREE.CatmullRomCurve3(ctrl.map(p => V3(...p))).getSpacedPoints(80);
+}
+// Punto di attacco: sul bordo esterno della lente, alla quota della cerniera
+function templeInfo() {
+  const D = frameDims(), T = TEMPLES[state.templeStyle] || TEMPLES.curved, L = state.templeLength / 10;
+  let sx, y;
+  if (D.shield) { sx = D.w + D.bw / 2 + D.rt * 0.5; y = D.h * 0.08; }
+  else {
+    const R = lensPoints(state.shape, D.w, D.h); y = D.h * 0.2;
+    const yn = y / (D.h / 2), wr = D.metal ? D.rt : D.rt * (0.72 + 0.45 * Math.max(0, yn) + 0.4 * Math.max(0, yn + 0.3));
+    sx = D.cx + edgeX(R, y, Math.max) + wr * 0.5;
+  }
+  return { D, T, L, sx, y, z: -D.depth * 0.9 - D.K * sx * sx, th: state.templeSplay * Math.PI / 180, line: s => templeLine(T, L, s) };
+}
+
+function buildTemples3D(I, silver, frontMat) {
+  const { D, T, sx, y, z, th } = I, SEG = 80, cut = Math.round(SEG * 0.78), up = V3(0, 1, 0), wT = T.w * state.templeW / 100, K = D.K;
+  const mBody = getMaterialObject(state.templeMaterial), mTip = getMaterialObject(state.tipMaterial), tips = [];
+  [-1, 1].forEach(s => {
+    // terminale (endpiece): collega il bordo alla cerniera
+    const ew = D.metal ? 0.07 : 0.14, eh = D.metal ? 0.09 : T.h0 * 0.9, zf = D.depth * 0.15, zr = -D.depth * 0.9 + 0.12;
+    const EP = [...Array(9).keys()].map(i => V3(s * sx, y, zf + (zr - zf) * i / 8));
+    addMesh(bend(sweepGeo(EP, EP.map(() => V3(1, 0, 0)), EP.map(() => V3(0, 1, 0)), i => { const k = Math.min(1, Math.sqrt(i / 8 / 0.2 + 0.001)); return [ew * k, eh * k]; }, false, nSharp(state.edgeFront, D.metal)), K), frontMat, 'front');
+
+    const pts = I.line(s), A = [], B = [];
+    pts.forEach((p, i) => {
+      const t = pts[Math.min(SEG, i + 1)].clone().sub(pts[Math.max(0, i - 1)]).normalize();
+      const a = new THREE.Vector3().crossVectors(up, t).normalize(); A.push(a); B.push(new THREE.Vector3().crossVectors(t, a).normalize());
+    });
+    const prof = (off, k) => i => { const u = (off + i) / SEG, c = Math.sqrt(Math.min(1, (1 - u) / 0.05)); return [wT * k * c, tempH(u, T) * k * c]; };
+    const n = nSharp(state.edgeTemple, T.round), sl = (arr, a, b) => arr.slice(a, b);
+    const body = sweepGeo(sl(pts, 0, cut + 3), sl(A, 0, cut + 3), sl(B, 0, cut + 3), prof(0, 1), false, n);
+    const tip = sweepGeo(sl(pts, cut), sl(A, cut), sl(B, cut), prof(cut, T.round ? 2.8 : 1.05), false, n);
+    [[body, mBody, 'temples'], [tip, mTip, 'tips']].forEach(([g, mat, part]) => {
+      const m = addMesh(g, mat, part); m.position.set(s * sx, y, z); m.rotation.y = -s * th;
+      if (part === 'tips') { m.updateMatrix(); tips[s > 0 ? 1 : 0] = pts[SEG].clone().applyMatrix4(m.matrix); }
+    });
+    const hinge = addMesh(new THREE.CylinderGeometry(0.09, 0.09, 0.4, 12), silver, null, false);
+    hinge.position.set(s * sx, y, z + 0.05);
+  });
+  if (state.engravingText.trim() && !T.round) {
+    const em = new THREE.MeshBasicMaterial({ map: generateEngravingTexture(state.engravingText), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 });
+    const eng = new THREE.Mesh(new THREE.PlaneGeometry(3.2, Math.min(0.4, tempH(0.28, T) * 1.2)), em);
+    eng.position.set(-(wT + 0.02), -0.02, -3.6); eng.rotation.y = -Math.PI / 2; eng.renderOrder = 3;
+    const grp = new THREE.Group(); grp.position.set(-sx, y, z); grp.rotation.y = th; grp.add(eng); eyewearGroup.add(grp);
+  }
+  return tips;
+}
+
+// Fascia posteriore: cordino, elastica o fascia sport larga, tra le punte delle aste
+function buildStrap(tips) {
+  if (state.strap === 'none' || !tips[0] || !tips[1]) return;
+  const [tl, tr] = tips, y = tl.y, zE = tl.z, sag = state.strap === 'cord' ? 2.4 : 3.2;
+  const ctrl = [tl, V3(tl.x * 0.92, y, zE - sag * 0.45), V3(tl.x * 0.6, y, zE - sag * 0.85), V3(0, y, zE - sag), V3(tr.x * 0.6, y, zE - sag * 0.85), V3(tr.x * 0.92, y, zE - sag * 0.45), tr];
+  const P = new THREE.CatmullRomCurve3(ctrl).getSpacedPoints(70), A = [], B = [], up = V3(0, 1, 0);
+  P.forEach((p, i) => { const t = P[Math.min(70, i + 1)].clone().sub(P[Math.max(0, i - 1)]).normalize(); A.push(up); B.push(new THREE.Vector3().crossVectors(t, up).normalize()); });
+  const cord = state.strap === 'cord', wa = cord ? 0.045 : state.strapWidth / 20, tb = cord ? 0.045 : state.strap === 'sport' ? 0.09 : 0.045;
+  const g = sweepGeo(P, A, B, i => { const k = endCap(i / 70, 0.02, 0.02); return [wa * k, tb * k]; }, false, cord ? 2 : 3.5, 10);
+  addMesh(g, getMaterialObject(state.strapMaterial), 'strap');
+}
+
+function buildRivets3D(w, h, bw, rt, depth, cx, K) {
+  if (state.rivets === 'none') return;
+  const mat = getMaterialObject('metal_silver'), x = cx + (w / 2) * 0.95 + rt * 0.45, y = h * 0.25, z = depth / 2 + 0.05 - K * x * x;
+  [-1, 1].forEach(s => {
+    const place = (m, px) => { m.position.set(s * px, y, z); m.rotation.y = -s * K * 2 * x; };
+    if (state.rivets === 'double_dot') {
+      const g = new THREE.CylinderGeometry(0.06, 0.06, 0.04, 12); g.rotateX(Math.PI / 2);
+      [0, 0.2].forEach(dx => place(addMesh(g, mat, null, false), x - dx - 0.1));
+    } else { const m = addMesh(new THREE.BoxGeometry(0.2, 0.2, 0.04), mat, null, false); place(m, x); m.rotation.z = Math.PI / 4; }
+  });
+}
+
+// =========================================================================
+// MATERIALI (colori convertiti sRGB → lineare con C())
+// =========================================================================
+function getMaterialObject(key) {
+  const d = MATERIALS_DB[key] || MATERIALS_DB.acetate_black;
+  if (['wood', 'bone', 'horn', 'carbon'].includes(d.type)) {
+    const p = { wood: [0.55, 0.3], bone: [0.35, 0.5], horn: [0.25, 0.8], carbon: [0.3, 1] }[d.type];
+    return new THREE.MeshPhysicalMaterial({ map: proceduralTextures[key], roughness: p[0], clearcoat: p[1], clearcoatRoughness: 0.15 });
+  }
+  if (d.type === 'tortoise') return new THREE.MeshPhysicalMaterial({ map: proceduralTextures[key], roughness: 0.2, clearcoat: 1, clearcoatRoughness: 0.08 });
+  if (d.type === 'crystal') return new THREE.MeshPhysicalMaterial({ color: C(d.color), roughness: d.roughness, opacity: d.opacity, transparent: true, clearcoat: 1, clearcoatRoughness: 0.05, side: THREE.DoubleSide });
+  if (d.type === 'metal') return new THREE.MeshStandardMaterial({ color: C(d.color), roughness: d.roughness, metalness: d.metalness });
+  return new THREE.MeshPhysicalMaterial({ color: C(d.color), roughness: d.roughness, metalness: d.metalness, clearcoat: d.clearcoat || 0, clearcoatRoughness: 0.1 });
+}
+
+let gradTex = null;
+function getLensMaterial() {
+  const c = LENS_COLORS_DB[state.lensColor] || LENS_COLORS_DB.g15, o = state.lensOpacity / 100, t = state.lensType;
+  const base = { side: THREE.DoubleSide, transparent: true, depthWrite: false, roughness: 0.04, clearcoat: 1, clearcoatRoughness: 0.03, metalness: 0 };
+  if (t === 'vista') return new THREE.MeshPhysicalMaterial({ ...base, color: C(0xdfe9ee), opacity: 0.18, envMapIntensity: 1.4 });
+  if (t === 'mirror') return new THREE.MeshPhysicalMaterial({ ...base, color: C(c.color), metalness: 1, roughness: 0.06, opacity: 0.5 + o * 0.5, envMapIntensity: 2.2 });
+  if (t === 'photochromic') return new THREE.MeshPhysicalMaterial({ ...base, color: C(c.color), opacity: 0.15 + (state.photoUV / 100) * 0.75 });
+  if (t === 'polar') return new THREE.MeshPhysicalMaterial({ ...base, color: C(c.color), opacity: Math.min(1, o + 0.1), roughness: 0.02, envMapIntensity: 2.6 });
+  if (t === 'gradient') {
+    if (!gradTex) {
+      const cv = document.createElement('canvas'); cv.width = 2; cv.height = 128;
+      const x = cv.getContext('2d'), gr = x.createLinearGradient(0, 0, 0, 128);
+      gr.addColorStop(0, '#ffffff'); gr.addColorStop(0.55, '#8a8a8a'); gr.addColorStop(1, '#111111');
+      x.fillStyle = gr; x.fillRect(0, 0, 2, 128); gradTex = new THREE.CanvasTexture(cv);
+    }
+    return new THREE.MeshPhysicalMaterial({ ...base, color: C(c.color), opacity: 0.35 + o * 0.65, alphaMap: gradTex });
+  }
+  return new THREE.MeshPhysicalMaterial({ ...base, color: C(c.color), opacity: o });
+}
+
+</script>
+  <script>
+// =========================================================================
+// UI MODULARE: Montatura · Lenti · Ponte · Aste · Materiali · Dettagli
+// =========================================================================
+const PART_MAT = { front: 'frontMaterial', bridge: 'bridgeMaterial', temples: 'templeMaterial', tips: 'tipMaterial', strap: 'strapMaterial', lower: 'lowerMaterial' };
+const NOSYNC = ['strap', 'lower'];
+const SYNC_MAT = ['frontMaterial', 'bridgeMaterial', 'templeMaterial', 'tipMaterial'];
+const PART_NAME = { front: 'Montatura', bridge: 'Ponte', temples: 'Aste', tips: 'Puntali', strap: 'Fascia', lower: 'Sostegno' };
+const CAT = { acetate: 'Acetati', tortoise: 'Tartaruga', crystal: 'Cristalli', wood: 'Legno', bone: 'Osso', horn: 'Corno', metal: 'Metalli', carbon: 'Tecnici', rubber: 'Sport / Fascia' };
+
+const SHAPE_LIST = [
+  ['wayfarer', 'Wayfarer', 'fa-vector-square'], ['aviator', 'Aviator', 'fa-plane-departure'], ['moscot', 'P3', 'fa-circle-notch'],
+  ['panthos', 'Panthos', 'fa-glasses'], ['tondi', 'Tondi', 'fa-circle'], ['ovali', 'Ovali', 'fa-egg'], ['rect', 'Rettangolo', 'fa-square'],
+  ['cateye', 'A Gatto', 'fa-cat'], ['boston', 'Boston', 'fa-lemon'], ['wellington', 'Wellington', 'fa-square-full'], ['sport', 'Sport Wrap', 'fa-person-biking'], ['custom', 'Personalizzata', 'fa-pen-ruler']
+];
+const BRIDGES = [['saddle', 'Sella'], ['keyhole', 'A chiave'], ['flattop', 'Flat-top'], ['double', 'Doppio ponte'], ['wire', 'Filo metallico'], ['bar', 'Barra singola'], ['metal_pads', 'Metallo + naselli']];
+const TEMPLE_OPTS = [['curved', 'Curve classiche'], ['straight', 'Dritte'], ['vintage', 'Spesse vintage'], ['skinny', 'Sottili acetato'], ['wide', 'Larghe piatte'], ['thin_metal', 'Filo metallico']];
+
+const h = (tag, cls, html) => { const e = document.createElement(tag); e.className = cls || ''; if (html !== undefined) e.innerHTML = html; return e; };
+const title = t => h('label', 'text-xs font-bold text-slate-400 uppercase tracking-wider block mb-2', t);
+
+function optsGrid(key, opts, cols) {
+  const g = h('div', `grid grid-cols-${cols} gap-2`);
+  opts.forEach(([v, n, ic]) => {
+    const b = h('button', 'btn-select-card p-2 rounded-xl border border-slate-800 bg-slate-900 text-center text-xs font-semibold',
+      (ic ? `<i class="fa-solid ${ic} text-sm mb-1 block"></i>` : '') + `<span>${n}</span>`);
+    b.dataset.val = v; b.dataset.key = key;
+    b.onclick = () => {
+      state[key] = v;
+      if (key === 'shape' && v !== 'custom') { state.customPts = state.customW = null; if (typeof modelMode !== 'undefined' && modelMode && modelMode !== 'size') { ensureCustom(); state.shape = 'custom'; } }
+      if (key === 'templeStyle') state.templeProf = null;
+      if (key === 'lower' && v !== 'same') state.lowerThick = { nylon: 0.4, wire: 1, band: 3 }[v];
+      if (key === 'strap' && v !== 'none' && v !== 'cord') state.strapWidth = v === 'sport' ? 25 : 12;
+      if (key === 'construction' && v === 'shield' && state.strap === 'none') { state.strap = 'sport'; state.strapWidth = 25; }
+      buildEyewear3D();
+    };
+    g.appendChild(b);
+  });
+  return g;
+}
+
+function sliderBlock(list) {
+  const d = h('div', 'bg-slate-900/70 p-4 rounded-xl border border-slate-800/80 space-y-4');
+  list.forEach(([k, l, min, max, step, unit, only]) => {
+    const w = h('div', '', `<div class="flex justify-between text-xs mb-1"><span class="text-slate-400">${l}:</span><span class="font-mono text-brand-gold font-bold" data-lab="${k}"></span></div>`);
+    const i = h('input', 'w-full'); i.type = 'range';
+    Object.assign(i, { min, max, step, value: state[k] });
+    i.dataset.key = k; i.dataset.unit = unit;
+    i.oninput = () => { state[k] = parseFloat(i.value); buildEyewear3D(); };
+    w.appendChild(i);
+    if (only) w.dataset.only = only;
+    d.appendChild(w);
+  });
+  return d;
+}
+
+function lensColors() {
+  const g = h('div', 'grid grid-cols-5 gap-2.5');
+  Object.entries(LENS_COLORS_DB).forEach(([k, lc]) => {
+    const b = h('button', 'swatch w-full h-9 rounded-xl border border-slate-700 hover:scale-105 transition shadow');
+    b.style.backgroundColor = '#' + lc.color.toString(16).padStart(6, '0');
+    b.title = lc.name; b.dataset.key = 'lensColor'; b.dataset.val = k;
+    b.onclick = () => { state.lensColor = k; buildEyewear3D(); };
+    g.appendChild(b);
+  });
+  return g;
+}
+
+// ---- Materiali: scelta della parte + selettore per categoria
+function setMaterial(k) {
+  if (state.syncMaterials && !NOSYNC.includes(state.activePart)) SYNC_MAT.forEach(p => state[p] = k);
+  else state[PART_MAT[state.activePart]] = k;
+  buildEyewear3D();
+}
+function materialSection() {
+  const d = h('div', 'space-y-4');
+  const sync = h('label', 'flex items-center justify-between bg-slate-900 p-3 rounded-xl border border-slate-800 cursor-pointer',
+    '<span class="text-xs font-semibold text-slate-200"><i class="fa-solid fa-link text-brand-gold mr-2"></i>Stesso materiale su tutte le parti</span>');
+  const cb = h('input', 'w-4 h-4 accent-yellow-500'); cb.type = 'checkbox'; cb.id = 'sync-materials';
+  cb.onchange = () => { state.syncMaterials = cb.checked; if (cb.checked) SYNC_MAT.forEach(p => state[p] = state.frontMaterial); buildEyewear3D(); };
+  sync.appendChild(cb); d.appendChild(sync);
+
+  const parts = h('div', 'grid grid-cols-3 gap-1.5'); parts.id = 'part-picker';
+  Object.keys(PART_MAT).forEach(p => {
+    const b = h('button', 'btn-select-card p-2 rounded-xl border border-slate-800 bg-slate-900 text-center',
+      `<div class="text-[11px] font-semibold">${PART_NAME[p]}</div><div class="text-[9px] text-slate-500 truncate" data-pm="${p}"></div>`);
+    b.dataset.part = p; b.onclick = () => { state.activePart = p; syncUI(); };
+    parts.appendChild(b);
+  });
+  d.appendChild(parts);
+  d.appendChild(h('div', 'text-[10px] text-slate-500', 'Suggerimento: clicca direttamente una parte sull’occhiale 3D per selezionarla.'));
+
+  const pick = h('div', 'space-y-3');
+  Object.entries(CAT).forEach(([type, label]) => {
+    const keys = Object.keys(MATERIALS_DB).filter(k => MATERIALS_DB[k].type === type);
+    if (!keys.length) return;
+    pick.appendChild(h('div', 'text-[10px] uppercase tracking-wider text-slate-500 -mb-1', label));
+    const g = h('div', 'grid grid-cols-5 gap-2');
+    keys.forEach(k => {
+      const m = MATERIALS_DB[k], t = proceduralTextures[k];
+      const b = h('button', 'swatch h-9 rounded-lg border border-slate-700 hover:scale-105 transition shadow');
+      b.style.background = t && t.image ? `center/cover url(${t.image.toDataURL()})` : '#' + (m.color || 0xffffff).toString(16).padStart(6, '0');
+      b.title = m.name; b.dataset.mat = k;
+      b.onclick = () => setMaterial(k);
+      g.appendChild(b);
+    });
+    pick.appendChild(g);
+  });
+  d.appendChild(pick);
+  return d;
+}
+
+// ---- Dettagli: incisione, laser, rivetti, codice
+function detailsSection() {
+  const d = h('div', 'space-y-5');
+  const eng = h('div', 'bg-slate-900/70 p-4 rounded-xl border border-slate-800/80 space-y-3',
+    `<label class="text-xs font-bold text-brand-gold uppercase tracking-wider block">Incisione asta sinistra</label>
+     <input type="text" id="input-engraving" maxlength="24" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs font-mono text-slate-100 focus:outline-none focus:border-brand-gold">
+     <div class="flex gap-2" id="eng-colors"></div>`);
+  d.appendChild(eng);
+  eng.querySelector('#input-engraving').oninput = e => { state.engravingText = e.target.value; buildEyewear3D(); };
+  ['#D4AF37', '#E0E0E0', '#FFFFFF', '#111111'].forEach(c => {
+    const b = h('button', 'w-7 h-7 rounded-full border-2 border-slate-700 hover:scale-110 transition shadow');
+    b.style.background = c; b.onclick = () => { state.engravingColor = c; buildEyewear3D(); };
+    eng.querySelector('#eng-colors').appendChild(b);
+  });
+
+  const laser = h('label', 'flex items-center justify-between bg-slate-900 p-3 rounded-xl border border-slate-800 cursor-pointer',
+    '<span class="text-xs font-semibold text-slate-200">Marchio laser sulla lente</span>');
+  const lc = h('input', 'w-4 h-4 accent-yellow-500'); lc.type = 'checkbox'; lc.id = 'lens-laser-toggle';
+  lc.onchange = () => { state.lensLaser = lc.checked; buildEyewear3D(); };
+  laser.appendChild(lc); d.appendChild(laser);
+
+  const riv = h('div'); riv.appendChild(title('Rivetti frontali'));
+  riv.appendChild(optsGrid('rivets', [['none', 'Nessuno'], ['double_dot', 'Doppio puntino'], ['shield', 'Scudetto']], 3));
+  d.appendChild(riv);
+
+  const code = h('div', 'bg-slate-900/70 p-4 rounded-xl border border-slate-800/80 space-y-2',
+    `<label class="text-xs font-bold text-brand-gold uppercase tracking-wider block">Codice configurazione</label>
+     <textarea id="code-box" rows="4" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-[10px] font-mono text-slate-200 focus:outline-none focus:border-brand-gold" placeholder="shape=wayfarer;construction=full;..."></textarea>
+     <div class="flex gap-2">
+       <button id="code-gen" class="flex-1 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs border border-slate-700">Genera dal modello</button>
+       <button id="code-load" class="flex-1 py-1.5 rounded-lg bg-brand-gold text-black font-bold text-xs">Carica codice</button>
+     </div>`);
+  d.appendChild(code);
+  code.querySelector('#code-gen').onclick = () => {
+    const box = code.querySelector('#code-box'); box.value = exportCode(); box.select();
+    try { navigator.clipboard.writeText(box.value); showToast('Codice generato e copiato'); } catch (e) { showToast('Codice generato'); }
+  };
+  code.querySelector('#code-load').onclick = () => importCode(code.querySelector('#code-box').value);
+  return d;
+}
+
+const TABS = [
+  { id: 'front', label: 'Montatura', icon: 'fa-glasses', sections: [
+    { t: 'Costruzione', el: () => optsGrid('construction', [['full', 'Cerchio intero'], ['half', 'Mezza (Nylor)'], ['rimless', 'Rimless'], ['shield', 'Sport visiera']], 2) },
+    { t: 'Forma lenti', el: () => optsGrid('shape', SHAPE_LIST, 4) },
+    { t: 'Parte inferiore della lente', el: () => optsGrid('lower', [['same', 'Bordo continuo'], ['nylon', 'Filo di nylon'], ['wire', 'Filo altro materiale'], ['band', 'Fascia altro materiale']], 2) },
+    { t: '', el: () => sliderBlock([['lowerCut', 'Altezza attacco', -60, 40, 1, '%'], ['lowerThick', 'Spessore sostegno', 0.3, 6, 0.1, 'mm']]) },
+    { t: 'Dimensioni', el: () => sliderBlock([['lensWidth', 'Larghezza lente', 44, 60, 1, 'mm'], ['lensHeight', 'Altezza lente', 32, 52, 1, 'mm'], ['thickness', 'Spessore montatura', 1.5, 7, 0.5, 'mm'], ['frameWrap', 'Curvatura frontale (wrap)', 0, 20, 1, ''], ['frameDepth', 'Profondità montatura', 60, 160, 5, '%'], ['edgeFront', 'Spigolosità bordo (0 tondo · 100 vivo)', 0, 100, 1, '%']]) }
+  ] },
+  { id: 'lens', label: 'Lenti', icon: 'fa-sun', sections: [
+    { t: 'Tipologia', el: () => optsGrid('lensType', [['sun_solid', 'Sole tinta unita'], ['vista', 'Da vista'], ['mirror', 'Specchiata'], ['photochromic', 'Fotocromatica'], ['polar', 'Polarizzata'], ['gradient', 'Sfumata']], 2) },
+    { t: 'Colorazione', el: lensColors },
+    { t: '', el: () => sliderBlock([['lensOpacity', 'Intensità tinta', 10, 95, 1, '%'], ['photoUV', 'Esposizione UV', 0, 100, 1, '%', 'photo']]) }
+  ] },
+  { id: 'bridge', label: 'Ponte', icon: 'fa-bridge', sections: [
+    { t: 'Tipo di ponte', el: () => optsGrid('bridge', BRIDGES, 2) },
+    { t: 'Dimensione', el: () => sliderBlock([['bridgeWidth', 'Larghezza ponte', 14, 24, 1, 'mm'], ['edgeBridge', 'Spigolosità ponte (0 tondo · 100 vivo)', 0, 100, 1, '%']]) }
+  ] },
+  { id: 'temples', label: 'Aste', icon: 'fa-ruler', sections: [
+    { t: 'Modello asta', el: () => optsGrid('templeStyle', TEMPLE_OPTS, 2) },
+    { t: 'Misure', el: () => sliderBlock([['templeLength', 'Lunghezza asta', 120, 150, 5, 'mm'], ['templeSplay', 'Apertura (splay)', 0, 12, 1, '°'], ['templeW', 'Spessore asta', 50, 220, 5, '%'], ['edgeTemple', 'Spigolosità aste (0 tondo · 100 vivo)', 0, 100, 1, '%']]) },
+    { t: 'Fascia posteriore', el: () => optsGrid('strap', [['none', 'Nessuna'], ['cord', 'Cordino'], ['elastic', 'Elastica'], ['sport', 'Sport larga']], 4) },
+    { t: '', el: () => sliderBlock([['strapWidth', 'Larghezza fascia', 8, 40, 1, 'mm']]) }
+  ] },
+  { id: 'materials', label: 'Materiali', icon: 'fa-palette', sections: [{ t: '', el: materialSection }] },
+  { id: 'details', label: 'Dettagli', icon: 'fa-pen-nib', sections: [{ t: '', el: detailsSection }] }
+];
+
+function initUI() {
+  const nav = document.getElementById('tabnav'), body = document.getElementById('tabbody');
+  TABS.forEach(tab => {
+    const b = h('button', 'flex-1 min-w-[68px] py-3 text-[11px] font-semibold text-center text-slate-400 hover:text-white transition flex flex-col items-center gap-1',
+      `<i class="fa-solid ${tab.icon} text-sm"></i><span>${tab.label}</span>`);
+    b.id = 'tabnav-' + tab.id; b.onclick = () => switchTab(tab.id);
+    nav.appendChild(b);
+    const pane = h('div', 'tab-content space-y-5 hidden'); pane.id = 'tab-' + tab.id;
+    tab.sections.forEach(s => { const w = h('div'); if (s.t) w.appendChild(title(s.t)); w.appendChild(s.el()); pane.appendChild(w); });
+    body.appendChild(pane);
+  });
+  initPicking();
+  initModeler();
+  switchTab('front');
+}
+
+function switchTab(id) {
+  document.querySelectorAll('.tab-content').forEach(e => e.classList.add('hidden'));
+  document.getElementById('tab-' + id).classList.remove('hidden');
+  document.querySelectorAll('[id^="tabnav-"]').forEach(e => e.classList.remove('active-tab'));
+  document.getElementById('tabnav-' + id).classList.add('active-tab');
+}
+
+// Clic sul modello 3D → seleziona la parte
+function initPicking() {
+  const cv = renderer.domElement, rc = new THREE.Raycaster(), mv = new THREE.Vector2();
+  let down = null;
+  cv.addEventListener('pointerdown', e => down = [e.clientX, e.clientY]);
+  cv.addEventListener('pointerup', e => {
+    if (modelMode || !down || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 5) return;
+    const r = cv.getBoundingClientRect();
+    mv.set((e.clientX - r.left) / r.width * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+    rc.setFromCamera(mv, camera);
+    const hit = rc.intersectObjects(eyewearGroup.children, true).find(i => i.object.userData.part);
+    if (!hit) return;
+    const p = hit.object.userData.part;
+    if (p === 'lens') { switchTab('lens'); showToast('Parte: Lenti'); return; }
+    state.activePart = p; switchTab('materials'); syncUI(); showToast('Parte: ' + PART_NAME[p]);
+  });
+}
+
+// =========================================================================
+// SYNC STATE → UI, PREZZO, CODICE
+// =========================================================================
+function syncUI() {
+  document.querySelectorAll('[data-key][data-val]').forEach(b => {
+    const on = state[b.dataset.key] === b.dataset.val;
+    b.classList.toggle('selected', on);
+    const i = b.querySelector('i');
+    if (i) { i.classList.toggle('text-brand-gold', on); i.classList.toggle('text-slate-400', !on); }
+  });
+  document.querySelectorAll('input[data-key]').forEach(i => {
+    const k = i.dataset.key, v = state[k];
+    i.value = v;
+    document.querySelector(`[data-lab="${k}"]`).textContent = (k === 'thickness' || k === 'lowerThick' ? v.toFixed(1) : v) + ' ' + i.dataset.unit;
+  });
+  const act = PART_MAT[state.activePart];
+  document.querySelectorAll('[data-mat]').forEach(b => b.classList.toggle('selected', b.dataset.mat === state[state.syncMaterials && !NOSYNC.includes(state.activePart) ? 'frontMaterial' : act]));
+  document.querySelectorAll('[data-part]').forEach(b => b.classList.toggle('selected', b.dataset.part === state.activePart && (!state.syncMaterials || NOSYNC.includes(state.activePart))));
+  document.querySelectorAll('[data-pm]').forEach(e => e.textContent = MATERIALS_DB[state[PART_MAT[e.dataset.pm]]].name);
+  document.getElementById('part-picker').classList.toggle('opacity-40', state.syncMaterials);
+  document.querySelectorAll('[data-only="photo"]').forEach(e => e.classList.toggle('hidden', state.lensType !== 'photochromic'));
+  document.getElementById('sync-materials').checked = state.syncMaterials;
+  document.getElementById('lens-laser-toggle').checked = state.lensLaser;
+  const inp = document.getElementById('input-engraving');
+  if (document.activeElement !== inp) inp.value = state.engravingText;
+}
+
+function updatePrice() {
+  const mp = k => ({ metal: 40, tortoise: 35, crystal: 20, wood: 55, bone: 75, horn: 90, carbon: 45, rubber: 5, acetate: 0 })[MATERIALS_DB[k].type] || 0;
+  let p = 150 + { full: 0, half: 25, rimless: 60, shield: 70 }[state.construction];
+  p += mp(state.frontMaterial) + mp(state.bridgeMaterial) * 0.3 + mp(state.templeMaterial) * 0.6 + mp(state.tipMaterial) * 0.3;
+  p += { sun_solid: 0, vista: 10, mirror: 35, photochromic: 55, polar: 45, gradient: 20 }[state.lensType] + { none: 0, cord: 8, elastic: 12, sport: 25 }[state.strap];
+  if (['metal_pads', 'wire', 'double'].includes(state.bridge)) p += 12;
+  if (state.rivets !== 'none') p += 8;
+  if (['wire', 'band'].includes(state.lower)) p += 8 + mp(state.lowerMaterial) * 0.3;
+  if (state.engravingText.trim()) p += 10;
+  document.getElementById('price').innerText = '€ ' + p.toFixed(2).replace('.', ',');
+}
+
+const CODE_KEYS = ['shape', 'construction', 'bridge', 'templeStyle', 'frontMaterial', 'bridgeMaterial', 'templeMaterial', 'tipMaterial', 'lensType', 'lensColor', 'rivets',
+  'lensWidth', 'lensHeight', 'bridgeWidth', 'thickness', 'templeLength', 'templeSplay', 'lensOpacity', 'frameWrap', 'bridgeY', 'strap', 'strapMaterial', 'strapWidth', 'frameDepth', 'templeW', 'lower', 'lowerMaterial', 'lowerCut', 'lowerThick', 'edgeFront', 'edgeBridge', 'edgeTemple', 'syncMaterials'];
+const NUM_KEYS = new Set(['lensWidth', 'lensHeight', 'bridgeWidth', 'thickness', 'templeLength', 'templeSplay', 'lensOpacity', 'frameWrap', 'bridgeY', 'strapWidth', 'frameDepth', 'templeW', 'lowerCut', 'lowerThick', 'edgeFront', 'edgeBridge', 'edgeTemple']);
+
+function exportCode() {
+  const base = CODE_KEYS.map(k => `${k}=${NUM_KEYS.has(k) && k === 'bridgeY' ? state[k].toFixed(3) : state[k]}`);
+  if (state.shape === 'custom' && state.customPts)
+    base.push('customPts=' + state.customPts.map(p => p.map(n => n.toFixed(3)).join(',')).join('|'), 'customW=' + state.customW.map(n => n.toFixed(2)).join(','));
+  if (state.templeProf) base.push('templeProf=' + state.templeProf.map(n => n.toFixed(3)).join(','));
+  return base.join(';');
+}
+function importCode(str) {
+  let n = 0;
+  str.split(/[;\n]+/).forEach(p => {
+    const [k, ...r] = p.split('='), key = k && k.trim(), v = r.join('=').trim();
+    if (key === 'customPts') { state.customPts = v.split('|').map(s => s.split(',').map(parseFloat)); n++; return; }
+    if (key === 'templeProf') { state.templeProf = v.split(',').map(parseFloat); n++; return; }
+    if (key === 'customW') { state.customW = v.split(',').map(parseFloat); n++; return; }
+    if (!CODE_KEYS.includes(key)) return;
+    if (NUM_KEYS.has(key)) { if (isNaN(parseFloat(v))) return; state[key] = parseFloat(v); }
+    else if (key === 'syncMaterials') state[key] = v === 'true';
+    else if (/Material$/.test(key)) { if (!MATERIALS_DB[v]) return; state[key] = v; }
+    else if (document.querySelector(`[data-key="${key}"][data-val="${v}"]`)) state[key] = v;
+    else return;
+    n++;
+  });
+  buildEyewear3D();
+  showToast(n ? `Codice caricato (${n} parametri)` : 'Codice non valido');
+}
+
+// =========================================================================
+// AZIONI
+// =========================================================================
+function setCameraPreset(preset) {
+  eyewearGroup.rotation.y = 0;
+  state.autoRotate = false;
+  document.getElementById('btn-autorotate').classList.remove('bg-brand-gold', 'text-black');
+  const v = { front: [0, 0, 22], side: [20, 2, 8], bridge: [0, 0.5, 9], top: [0, 24, 3] }[preset] || [12, 6, 18];
+  gsapCameraMove(...v, 0, 0, 0);
+}
+function gsapCameraMove(px, py, pz, tx, ty, tz) {
+  const t0 = performance.now(), from = camera.position.clone(), to = new THREE.Vector3(px, py, pz);
+  (function step(now) {
+    const k = Math.min((now - t0) / 600, 1), e = 1 - Math.pow(1 - k, 3);
+    camera.position.lerpVectors(from, to, e); controls.target.set(tx, ty, tz); controls.update();
+    if (k < 1) requestAnimationFrame(step);
+  })(t0);
+}
+function toggleAutoRotate() {
+  if (modelMode) return;
+  state.autoRotate = !state.autoRotate;
+  const b = document.getElementById('btn-autorotate');
+  b.classList.toggle('bg-brand-gold', state.autoRotate); b.classList.toggle('text-black', state.autoRotate);
+}
+function setStudioEnv(k) {
+  state.env = k;
+  ['light', 'dark', 'warm'].forEach(x => {
+    const b = document.getElementById('envBtn-' + x), on = x === k;
+    b.classList.toggle('bg-slate-800', on); b.classList.toggle('text-brand-gold', on); b.classList.toggle('font-bold', on); b.classList.toggle('text-slate-400', !on);
+  });
+  const cfg = { light: [0xf1f5f9, 0xffffff, 2.0], warm: [0x1a1410, 0xffdfb3, 2.2], dark: [0x0b0c10, 0xfff5ea, 1.8] }[k];
+  scene.background = C(cfg[0]); studioLightKey.color.setHex(cfg[1]); studioLightKey.intensity = cfg[2];
+}
+function randomizeEyewear() {
+  const pick = a => a[Math.floor(Math.random() * a.length)], mats = Object.keys(MATERIALS_DB);
+  state.shape = pick(SHAPE_LIST)[0]; state.construction = pick(['full', 'half', 'rimless', 'shield']); state.strap = state.construction === 'shield' ? 'sport' : pick(['none', 'none', 'cord', 'elastic']); state.templeProf = null;
+  state.bridge = pick(BRIDGES)[0]; state.templeStyle = pick(TEMPLE_OPTS)[0];
+  state.syncMaterials = Math.random() < 0.35;
+  SYNC_MAT.forEach(p => state[p] = pick(mats));
+  if (state.syncMaterials) SYNC_MAT.forEach(p => state[p] = state.frontMaterial);
+  state.lensColor = pick(Object.keys(LENS_COLORS_DB));
+  state.lensType = pick(['sun_solid', 'sun_solid', 'vista', 'mirror', 'photochromic', 'polar', 'gradient']);
+  state.templeSplay = Math.floor(Math.random() * 6);
+  buildEyewear3D();
+  showToast('🎲 Generata nuova combinazione unica!');
+}
+function takeScreenshot() {
+  renderer.render(scene, camera);
+  const a = document.createElement('a');
+  a.download = `OJO_Occhiale_Custom_${Date.now()}.png`; a.href = renderer.domElement.toDataURL('image/png'); a.click();
+  showToast('Immagine PNG salvata!');
+}
+function showOrderToast() { showToast('✨ Progetto salvato! Codice: ' + exportCode().slice(0, 40) + '…'); }
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  document.getElementById('toast-text').innerText = msg;
+  t.classList.remove('translate-y-[-100px]', 'opacity-0'); t.classList.add('translate-y-0', 'opacity-100');
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(() => { t.classList.remove('translate-y-0', 'opacity-100'); t.classList.add('translate-y-[-100px]', 'opacity-0'); }, 3000);
+}
+
+</script>
+  <script>
+// =========================================================================
+// MODELLAZIONE DIRETTA: maniglie trascinabili sul modello 3D
+//  pts   = muovi i punti del contorno lente (si specchia sull'altra lente)
+//  thick = tira il bordo: spessore locale della montatura
+//  size  = ingrandisci lente, ponte (larghezza/altezza) e aste (lunghezza/apertura)
+// =========================================================================
+let handleGroup = null, modelMode = null, dragH = null;
+const MODE_INFO = {
+  pts: ['Contorno', 'Trascina i punti dorati per rimodellare la lente'],
+  thick: ['Spessore', 'Trascina i punti rosa: più lontano = bordo più spesso'],
+  asta: ['Aste', 'Trascina i punti viola: altezza della sezione dell’asta (vista laterale)'],
+  size: ['Misure', 'Azzurro: lente · Verde: ponte · Arancio: asta']
+};
+
+function ensureCustom() {
+  if (state.customPts) return;
+  const q = SHAPE_PTS[state.shape];
+  if (q) state.customPts = q.map(p => p.slice());
+  else {
+    const w = state.lensWidth / 10, h = state.lensHeight / 10, P = lensPoints(state.shape, w, h);
+    state.customPts = [...Array(12).keys()].map(i => { const p = P[Math.floor(i * P.length / 12)]; return [p.x / (w / 2), p.y / (h / 2)]; });
+  }
+  state.customW = state.customPts.map(() => 1);
+}
+
+// Peso dello spessore locale, interpolato per angolo attorno al centro della lente
+function weightFn(ab, side) {
+  const q = state.shape === 'custom' && state.customPts, W = state.customW;
+  if (!ab || !q || !W) return () => 1;
+  const c = q.reduce((s, p) => [s[0] + p[0] / q.length, s[1] + p[1] / q.length], [0, 0]);
+  const ang = q.map(p => Math.atan2(p[1] - c[1], p[0] - c[0])), ord = [...q.keys()].sort((i, j) => ang[i] - ang[j]), n = ord.length, TP = Math.PI * 2;
+  return p => {
+    const t = Math.atan2(p.y / ab[1] - c[1], (side * p.x) / ab[0] - c[0]);
+    let k = 0; while (k < n && ang[ord[k]] <= t) k++;
+    const i1 = ord[k % n], i0 = ord[(k + n - 1) % n];
+    let a0 = ang[i0], a1 = ang[i1], tt = t;
+    if (a1 <= a0) a1 += TP; if (tt < a0) tt += TP;
+    const f = Math.min(1, Math.max(0, (tt - a0) / (a1 - a0 || 1)));
+    return W[i0] * (1 - f) + W[i1] * f;
+  };
+}
+
+function ensureTempleProf() {
+  if (state.templeProf) return;
+  const T = TEMPLES[state.templeStyle] || TEMPLES.curved;
+  state.templeProf = TU.map(u => tempH(u, T));
+}
+
+// Posizione della punta dell'asta destra (maniglia "Misure")
+function tipPos() {
+  const I = templeInfo(), p = I.line(1)[80], c = Math.cos(I.th), s = Math.sin(I.th);
+  return { x: I.sx + p.x * c - p.z * s, y: I.y + p.y, z: I.z + p.x * s + p.z * c, I };
+}
+
+function buildHandles() {
+  if (!handleGroup) { handleGroup = new THREE.Group(); scene.add(handleGroup); }
+  while (handleGroup.children.length) { const o = handleGroup.children[0]; handleGroup.remove(o); o.geometry.dispose(); o.material.dispose(); }
+  if (!modelMode) return;
+  const D = frameDims(), { w, h, bw, K, cx, rt, shield } = D, a = w / 2, b = h / 2;
+  const mode = shield && (modelMode === 'pts' || modelMode === 'thick') ? 'size' : modelMode;
+  const add = (kind, i, x, y, col, z, side) => {
+    const m = new THREE.Mesh(new THREE.SphereGeometry(0.12, 16, 12), new THREE.MeshBasicMaterial({ color: col, depthTest: false, transparent: true, opacity: 0.95 }));
+    m.position.set(x, y, z !== undefined ? z : 0.5 - K * x * x); m.renderOrder = 10; m.userData.handle = { kind, i, s: side }; handleGroup.add(m);
+  };
+  if (mode === 'pts' || mode === 'thick') {
+    const q = state.customPts, c = q.reduce((s, p) => [s[0] + p[0] / q.length, s[1] + p[1] / q.length], [0, 0]);
+    q.forEach((p, i) => {
+      let x = cx + p[0] * a, y = p[1] * b;
+      if (mode === 'thick') {
+        const dx = p[0] - c[0], dy = p[1] - c[1], d = Math.hypot(dx * a, dy * b) || 1, r = rt * 0.9 * state.customW[i];
+        x += (dx * a / d) * r; y += (dy * b / d) * r;
+      }
+      add(mode, i, x, y, mode === 'pts' ? 0xD4AF37 : 0xf472b6);
+    });
+  } else if (mode === 'asta') {
+    ensureTempleProf();
+    const I = templeInfo(), off = I.T.w * state.templeW / 100 + 0.06;
+    [1, -1].forEach(sd => {
+      const pts = I.line(sd), ang = -sd * I.th, c = Math.cos(ang), s = Math.sin(ang);
+      TU.forEach((u, k) => {
+        const p = pts[Math.round(u * 80)];
+        add('tprof', k, sd * I.sx + p.x * c + p.z * s + sd * off, I.y + p.y + state.templeProf[k], 0xc084fc, I.z - p.x * s + p.z * c, sd);
+      });
+    });
+  } else {
+    if (!shield) { add('corner', 0, cx + a, -b, 0x4fc3f7); add('bridge', 0, bw / 2, h * 0.2 + state.bridgeY * h, 0x81c784); }
+    const t = tipPos(); add('temple', 0, t.x, t.y, 0xffa726, t.z);
+  }
+}
+
+// Vista laterale centrata sull'asta (utile per modellarne il profilo)
+function focusTemple() {
+  const I = templeInfo();
+  eyewearGroup.rotation.y = 0; state.autoRotate = false;
+  document.getElementById('btn-autorotate').classList.remove('bg-brand-gold', 'text-black');
+  gsapCameraMove(I.sx + 16, I.y + 0.8, I.z - I.L / 2, I.sx * 0.5, I.y, I.z - I.L / 2);
+}
+
+function setModelMode(m) {
+  dragH = null; if (typeof controls !== 'undefined') controls.enabled = true;
+  if (m && state.construction === 'shield' && (m === 'pts' || m === 'thick')) { m = 'size'; showToast('Il visore si modella da Misure e Aste'); }
+  modelMode = m;
+  if (m) {
+    if (m === 'pts' || m === 'thick') { ensureCustom(); state.shape = 'custom'; }
+    if (m === 'asta') ensureTempleProf();
+    state.autoRotate = false; document.getElementById('btn-autorotate').classList.remove('bg-brand-gold', 'text-black');
+    if (m === 'asta') focusTemple(); else setCameraPreset(m === 'size' ? 'threequarter' : 'front');
+  }
+  document.querySelectorAll('#model-bar [data-m]').forEach(b => { b.classList.toggle('hidden', !m && b.dataset.m !== 'toggle'); b.classList.toggle('bg-brand-gold', b.dataset.m === m); b.classList.toggle('text-black', b.dataset.m === m); });
+  document.getElementById('model-hint').textContent = m ? MODE_INFO[m][1] : '';
+  document.getElementById('model-hint').classList.toggle('hidden', !m);
+  buildEyewear3D();
+}
+
+function resetModel() {
+  state.customPts = state.customW = null; state.shape = 'wayfarer'; state.bridgeY = 0; state.templeProf = null;
+  if (modelMode === 'pts' || modelMode === 'thick') { ensureCustom(); state.shape = 'custom'; }
+  if (modelMode === 'asta') ensureTempleProf();
+  buildEyewear3D(); showToast('Forma ripristinata');
+}
+
+function initModeler() {
+  const c = document.getElementById('viewport-container'), bar = document.createElement('div');
+  bar.id = 'model-bar-wrap'; bar.className = 'absolute top-4 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-1 max-w-[92%]';
+  const btn = 'px-2.5 py-1 text-xs rounded-lg bg-slate-800/90 text-slate-200 hover:bg-brand-gold hover:text-black transition whitespace-nowrap';
+  bar.innerHTML = `<div id="model-bar" class="flex flex-wrap justify-center items-center gap-1.5 bg-slate-900/80 backdrop-blur-md p-1.5 rounded-xl border border-slate-700/60 shadow-xl">
+      <button data-m="toggle" class="${btn}"><i class="fa-solid fa-pen-ruler mr-1"></i>Modella</button>
+      ${Object.entries(MODE_INFO).map(([k, v]) => `<button data-m="${k}" class="${btn} hidden">${v[0]}</button>`).join('')}
+      <button data-m="reset" class="${btn} hidden" title="Ripristina forma">↺</button>
+      <span data-m="sep" class="hidden w-px h-4 bg-slate-600 mx-0.5"></span>
+      ${[['front', 'Fronte'], ['side', 'Lato'], ['top', 'Alto'], ['3q', '3/4']].map(([k, n]) => `<button data-m="v:${k}" class="${btn} hidden">${n}</button>`).join('')}</div>
+    <div id="model-hint" class="hidden text-[11px] text-brand-gold bg-slate-900/80 px-2 py-0.5 rounded-md"></div>`;
+  c.appendChild(bar);
+  bar.querySelectorAll('[data-m]').forEach(b => b.onclick = () => {
+    const m = b.dataset.m;
+    if (m === 'toggle') setModelMode(modelMode ? null : 'pts');
+    else if (m === 'reset') resetModel();
+    else if (m === 'sep') return;
+    else if (m.startsWith('v:')) {
+      const v = m.slice(2);
+      if (v === 'side' && (modelMode === 'asta' || modelMode === 'size')) focusTemple();
+      else setCameraPreset(v === '3q' ? 'threequarter' : v);
+    } else setModelMode(m);
+  });
+
+  const cv = renderer.domElement, rc = new THREE.Raycaster(), mv = new THREE.Vector2(), pt = new THREE.Vector3();
+  const ray = e => { const r = cv.getBoundingClientRect(); mv.set((e.clientX - r.left) / r.width * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1); rc.setFromCamera(mv, camera); };
+  let pend = false; const later = () => { if (pend) return; pend = true; requestAnimationFrame(() => { pend = false; buildEyewear3D(); }); };
+  const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+
+  cv.addEventListener('pointerdown', e => {
+    if (!modelMode || !handleGroup) return;
+    ray(e); const hit = rc.intersectObjects(handleGroup.children)[0];
+    if (!hit) return;
+    dragH = hit.object.userData.handle; controls.enabled = false; e.stopImmediatePropagation();
+    try { cv.setPointerCapture(e.pointerId); } catch (_) {}
+  }, true);
+
+  cv.addEventListener('pointermove', e => {
+    if (!dragH) return;
+    const hp = handleGroup.children.find(m => m.userData.handle.kind === dragH.kind && m.userData.handle.i === dragH.i && m.userData.handle.s === dragH.s);
+    if (!hp) return;
+    ray(e);
+    const kd = dragH.kind, pl = kd === 'temple' ? new THREE.Plane(V3(0, 1, 0), -hp.position.y) : kd === 'tprof' ? new THREE.Plane(V3(1, 0, 0), -hp.position.x) : new THREE.Plane(V3(0, 0, 1), -hp.position.z);
+    if (!rc.ray.intersectPlane(pl, pt)) return;
+    const w = state.lensWidth / 10, h = state.lensHeight / 10, bw = state.bridgeWidth / 10, a = w / 2, b = h / 2, cx = w / 2 + bw / 2, rt = state.thickness / 10, k = dragH.kind;
+    if (k === 'pts') state.customPts[dragH.i] = [clamp((pt.x - cx) / a, -1.5, 1.5), clamp(pt.y / b, -1.5, 1.5)];
+    else if (k === 'thick') {
+      const p = state.customPts[dragH.i];
+      state.customW[dragH.i] = clamp(Math.hypot(pt.x - (cx + p[0] * a), pt.y - p[1] * b) / (rt * 0.9), 0.35, 2.8);
+    }
+    else if (k === 'corner') { state.lensWidth = clamp(Math.round((pt.x - bw / 2) * 10), 44, 60); state.lensHeight = clamp(Math.round(-pt.y * 20), 32, 52); }
+    else if (k === 'bridge') { state.bridgeWidth = clamp(Math.round(pt.x * 20), 14, 24); state.bridgeY = clamp((pt.y - h * 0.2) / h, -0.12, 0.25); }
+    else if (k === 'temple') {
+      const I = templeInfo(), dx = (pt.x + 0.4) - I.sx, dz = I.z - pt.z;
+      state.templeLength = clamp(Math.round(Math.hypot(dx, dz) * 10 / 5) * 5, 120, 150);
+      state.templeSplay = clamp(Math.round(Math.atan2(dx, dz) * 180 / Math.PI), 0, 12);
+    }
+    else if (k === 'tprof') {
+      const I = templeInfo(), p = I.line(1)[Math.round(TU[dragH.i] * 80)];
+      state.templeProf[dragH.i] = clamp(pt.y - (I.y + p.y), 0.04, 0.8);
+    }
+    later();
+  });
+  const end = () => { dragH = null; controls.enabled = true; };
+  cv.addEventListener('pointerup', end); cv.addEventListener('pointercancel', end); cv.addEventListener('lostpointercapture', end);
+  window.addEventListener('pointerup', end); window.addEventListener('pointercancel', end);
+}
+
+</script>
+</body>
+</html>
