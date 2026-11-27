@@ -42,6 +42,7 @@
   </script>
 
   <style>
+    /* Custom Scrollbar for Controls */
     ::-webkit-scrollbar {
       width: 6px;
       height: 6px;
@@ -69,6 +70,7 @@
       border-bottom: 2px solid #D4AF37;
     }
 
+    /* Range slider custom styling */
     input[type=range] {
       -webkit-appearance: none;
       background: #232733;
@@ -98,9 +100,9 @@
       box-shadow: 0 0 12px rgba(212, 175, 55, 0.15);
     }
   
-    .no-scrollbar{scrollbar-width:none}.no-scrollbar::-webkit-scrollbar{display:none}
-    .swatch.selected{box-shadow:0 0 0 2px #0b0c10,0 0 0 4px #D4AF37}
-  </style>
+.no-scrollbar{scrollbar-width:none}.no-scrollbar::-webkit-scrollbar{display:none}
+.swatch.selected{box-shadow:0 0 0 2px #0b0c10,0 0 0 4px #D4AF37}
+</style>
 
 </head>
 <body class="bg-brand-darkBg text-slate-100 font-sans overflow-hidden select-none h-[100dvh] w-screen flex flex-col">
@@ -108,6 +110,7 @@
   <!-- TOP BAR / HEADER -->
   <header class="h-16 border-b border-brand-panelBorder bg-brand-panelBg/90 backdrop-blur px-4 md:px-6 flex items-center justify-between z-20 shrink-0">
     <div class="flex items-center space-x-3">
+      <!-- OJO Logo Badge -->
       <div class="w-10 h-10 rounded-full bg-black border border-brand-gold flex items-center justify-center font-bold text-white shadow-md">
         <span class="tracking-tighter text-sm font-serif">O<span class="text-brand-gold">J</span>O</span>
       </div>
@@ -121,12 +124,6 @@
 
     <!-- Quick Controls & Actions Header -->
     <div class="flex items-center space-x-2 md:space-x-3">
-      <!-- Virtual Try-On Webcam Toggle -->
-      <button id="btn-ar-header" onclick="toggleARMode()" class="px-3 py-1.5 rounded-lg bg-emerald-500/15 border border-emerald-400/50 text-emerald-300 text-xs font-semibold hover:bg-emerald-500/25 transition flex items-center gap-2 shadow-lg">
-        <i class="fa-solid fa-video text-sm"></i>
-        <span>Prova Indosso</span>
-      </button>
-
       <!-- Preset Quick Dropdown / Buttons -->
       <button onclick="randomizeEyewear()" class="px-3 py-1.5 rounded-lg bg-gradient-to-r from-amber-500/20 to-yellow-600/20 border border-brand-gold/50 text-brand-gold text-xs font-semibold hover:from-amber-500/30 hover:to-yellow-600/30 transition flex items-center gap-2 shadow-lg">
         <i class="fa-solid font-bold fa-dice text-sm"></i>
@@ -154,57 +151,11 @@
     <!-- 3D VIEWPORT CONTAINER -->
     <div class="flex-1 relative bg-gradient-to-b from-slate-950 via-slate-900 to-black overflow-hidden flex items-center justify-center" id="viewport-container">
       
-      <!-- Live Webcam Video Layer -->
-      <video id="ar-video" playsinline autoplay muted class="hidden absolute inset-0 w-full h-full object-cover pointer-events-none z-0" style="transform: scaleX(-1);"></video>
-
-      <!-- 2D Overlay Canvas for Face Guide & Landmark Tracking Points -->
-      <canvas id="ar-overlay-canvas" class="hidden absolute inset-0 w-full h-full pointer-events-none z-[1]"></canvas>
-
-      <!-- Three.js Canvas Element -->
-      <canvas id="webgl-canvas" class="relative z-[2] w-full h-full cursor-grab active:cursor-grabbing block outline-none"></canvas>
-
-      <!-- AR Virtual Try-On HUD Overlay -->
-      <div id="ar-hud" class="hidden absolute bottom-4 left-4 right-4 z-20 flex flex-col items-center gap-2 pointer-events-none">
-        <div class="bg-slate-950/85 backdrop-blur-md border border-emerald-500/40 rounded-2xl px-4 py-2.5 shadow-2xl pointer-events-auto max-w-xl w-full flex flex-col gap-2">
-          <div class="flex flex-wrap items-center justify-between gap-2">
-            <div class="flex items-center gap-2 text-xs">
-              <span id="ar-status-dot" class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse"></span>
-              <span id="ar-status-text" class="font-semibold text-slate-200">Avvio videocamera...</span>
-            </div>
-            <div class="flex items-center gap-1.5">
-              <button id="btn-ar-landmarks" onclick="toggleARLandmarks()" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] border border-slate-700 transition" title="Mostra/nascondi punti tracking sul viso">
-                <i class="fa-solid fa-braille mr-1 text-emerald-400"></i>Punti Viso
-              </button>
-              <button id="btn-ar-flip" onclick="switchARCamera()" class="hidden px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] border border-slate-700 transition" title="Cambia fotocamera">
-                <i class="fa-solid fa-camera-rotate mr-1"></i>Camera
-              </button>
-              <button onclick="resetAROffsets()" class="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] border border-slate-700 transition" title="Ripristina calzata">
-                ↺
-              </button>
-              <button onclick="toggleARMode(false)" class="px-2.5 py-1 rounded-lg bg-rose-500/20 hover:bg-rose-500/35 text-rose-300 border border-rose-500/40 text-[11px] font-semibold transition">
-                <i class="fa-solid fa-xmark mr-1"></i>Chiudi AR
-              </button>
-            </div>
-          </div>
-          <div class="grid grid-cols-3 gap-3 pt-1 border-t border-slate-800/80 text-[10px] text-slate-400">
-            <label class="flex flex-col gap-1">
-              <span class="flex justify-between"><span>Scala</span><span id="ar-val-scale" class="text-brand-gold font-mono">1.00x</span></span>
-              <input type="range" id="ar-off-scale" min="0.75" max="1.35" step="0.01" value="1" oninput="updateAROffset('scale', this.value)">
-            </label>
-            <label class="flex flex-col gap-1">
-              <span class="flex justify-between"><span>Altezza</span><span id="ar-val-y" class="text-brand-gold font-mono">0.0</span></span>
-              <input type="range" id="ar-off-y" min="-1.5" max="1.5" step="0.05" value="0" oninput="updateAROffset('y', this.value)">
-            </label>
-            <label class="flex flex-col gap-1">
-              <span class="flex justify-between"><span>Profondità</span><span id="ar-val-z" class="text-brand-gold font-mono">0.0</span></span>
-              <input type="range" id="ar-off-z" min="-1.5" max="1.5" step="0.05" value="0" oninput="updateAROffset('z', this.value)">
-            </label>
-          </div>
-        </div>
-      </div>
+      <!-- Canvas Canvas Element -->
+      <canvas id="webgl-canvas" class="w-full h-full cursor-grab active:cursor-grabbing block outline-none"></canvas>
 
       <!-- Overlay Floating Controls (Camera Presets & Toggles) -->
-      <div id="studio-controls-bar" class="absolute bottom-4 left-4 right-4 lg:right-auto flex flex-wrap items-center justify-between lg:justify-start gap-2 z-10 pointer-events-none">
+      <div class="absolute bottom-4 left-4 right-4 lg:right-auto flex flex-wrap items-center justify-between lg:justify-start gap-2 z-10 pointer-events-none">
         
         <div class="flex items-center gap-1.5 bg-slate-900/80 backdrop-blur-md p-1.5 rounded-xl border border-slate-700/60 pointer-events-auto shadow-xl">
           <span class="text-[10px] uppercase font-bold text-slate-400 px-2 hidden sm:inline">Vista:</span>
@@ -215,13 +166,10 @@
         </div>
 
         <div class="flex items-center gap-2 pointer-events-auto">
+          <!-- Auto Rotate Toggle -->
           <button id="btn-autorotate" onclick="toggleAutoRotate()" class="px-3 py-1.5 rounded-xl bg-slate-900/80 backdrop-blur-md border border-slate-700/60 text-slate-300 text-xs hover:border-brand-gold transition flex items-center gap-2 shadow-xl">
             <i class="fa-solid fa-arrows-spin text-brand-gold"></i>
             <span>Auto-Rotazione</span>
-          </button>
-          <button onclick="toggleARMode(true)" class="px-3 py-1.5 rounded-xl bg-emerald-950/85 backdrop-blur-md border border-emerald-500/50 text-emerald-300 text-xs hover:bg-emerald-500 hover:text-black transition flex items-center gap-2 shadow-xl">
-            <i class="fa-solid fa-face-smile"></i>
-            <span>Prova sul Viso</span>
           </button>
         </div>
       </div>
@@ -270,32 +218,34 @@ const C = hex => new THREE.Color(hex).convertSRGBToLinear();
     // GLOBAL STATE & DATA DEFINITIONS
     // =========================================================================
     const state = {
-      shape: 'wayfarer',
-      construction: 'full',
-      bridge: 'saddle',
-      lensWidth: 52,
-      lensHeight: 42,
-      bridgeWidth: 18,
-      thickness: 4.0,
-      templeStyle: 'curved',
+      shape: 'wayfarer',          // wayfarer, aviator, moscot, panthos, tondi, ovali, rect, cateye
+      construction: 'full',       // full, half, rimless
+      bridge: 'saddle',           // saddle, keyhole, double, metal_pads, flattop
+      lensWidth: 52,              // mm
+      lensHeight: 42,             // mm
+      bridgeWidth: 18,            // mm
+      thickness: 4.0,             // mm
+      templeStyle: 'curved',      // straight, curved, vintage, thin_metal, sport
       syncMaterials: true,
       frontMaterial: 'acetate_black',
       templeMaterial: 'acetate_black',
-      lensType: 'sun_solid',
-      lensColor: 'g15',
-      lensOpacity: 75,
-      photoUV: 30,
+      lensType: 'sun_solid',      // vista, sun_solid, gradient, mirror, photochromic
+      lensColor: 'g15',           // smoke, g15, sepia, ocean, amber, pink, purple, mirror_silver, mirror_gold, mirror_blue
+      lensOpacity: 75,            // %
+      photoUV: 30,                // %
       engravingText: 'OJO MILANO',
       engravingColor: '#D4AF37',
       lensLaser: true,
-      rivets: 'double_dot',
+      rivets: 'double_dot',       // none, double_dot, triple_dot, shield, bar
       autoRotate: false,
       env: 'dark',
       bridgeMaterial: 'acetate_black', tipMaterial: 'acetate_black',
-      frameWrap: 10, bridgeY: 0, edgeFront: 15, edgeBridge: 15, edgeTemple: 15, lower: 'same', lowerMaterial: 'metal_silver', lowerCut: -16, lowerThick: 1, strap: 'none', strapMaterial: 'rubber_black', strapWidth: 25, frameDepth: 100, templeW: 100, templeProf: null, templeCurve: null, customPts: null, customW: null, templeLength: 145, templeSplay: 0, activePart: 'front'
+      frameWrap: 10, bridgeY: 0, templeBend: null, templeDrop: null, bridgeLift: 100, edgeFront: 15, edgeBridge: 15, edgeTemple: 15, lower: 'same', lowerMaterial: 'metal_silver', lowerCut: -16, lowerThick: 1, strap: 'none', strapMaterial: 'rubber_black', strapWidth: 25, frameDepth: 100, templeW: 100, templeProf: null, customPts: null, customW: null, templeLength: 145, templeSplay: 0, activePart: 'front'
     };
 
+    // Material definitions for 3D PBR
     const MATERIALS_DB = {
+      // Glossy Acetates
       acetate_black: { name: 'Nero Lucido', type: 'acetate', color: 0x0a0a0a, roughness: 0.1, metalness: 0.05, clearcoat: 1.0 },
       acetate_bordeaux: { name: 'Rosso Bordeaux', type: 'acetate', color: 0x580a14, roughness: 0.15, metalness: 0.05, clearcoat: 1.0 },
       acetate_navy: { name: 'Blu Notte', type: 'acetate', color: 0x0b192e, roughness: 0.12, metalness: 0.05, clearcoat: 1.0 },
@@ -303,19 +253,23 @@ const C = hex => new THREE.Color(hex).convertSRGBToLinear();
       acetate_ivory: { name: 'Bianco Avorio', type: 'acetate', color: 0xf0efe9, roughness: 0.2, metalness: 0.0, clearcoat: 0.8 },
       acetate_pink: { name: 'Rosa Cipria', type: 'acetate', color: 0xe8b4b8, roughness: 0.2, metalness: 0.0, clearcoat: 0.9 },
 
+      // Tortoiseshell (Procedural Canvas Generated)
       tortoise_classic: { name: 'Havana Classico', type: 'tortoise', baseColor: '#964B00', spotColor: '#1a0d00' },
       tortoise_honey: { name: 'Miele Ambra', type: 'tortoise', baseColor: '#D4A359', spotColor: '#3A2000' },
       tortoise_dark: { name: 'Tartaruga Scuro', type: 'tortoise', baseColor: '#4A2511', spotColor: '#050200' },
 
+      // Crystal / Translucent
       crystal_clear: { name: 'Cristallo Chiaro', type: 'crystal', color: 0xffffff, opacity: 0.45, roughness: 0.05, transmission: 0.85 },
       crystal_champagne: { name: 'Champagne', type: 'crystal', color: 0xf4e3b1, opacity: 0.55, roughness: 0.08, transmission: 0.75 },
       crystal_smoke: { name: 'Fumo Trasparente', type: 'crystal', color: 0x666666, opacity: 0.6, roughness: 0.1, transmission: 0.65 },
       crystal_sage: { name: 'Verde Salvia', type: 'crystal', color: 0x8a9a86, opacity: 0.5, roughness: 0.08, transmission: 0.75 },
 
+      // Matte Acetate
       matte_black: { name: 'Nero Opaco', type: 'acetate', color: 0x121212, roughness: 0.7, metalness: 0.0, clearcoat: 0.0 },
       matte_slate: { name: 'Grigio Ardesia', type: 'acetate', color: 0x3a3f47, roughness: 0.65, metalness: 0.0, clearcoat: 0.0 },
       matte_olive: { name: 'Verde Oliva', type: 'acetate', color: 0x3b4234, roughness: 0.65, metalness: 0.0, clearcoat: 0.0 },
 
+      // Metals
       metal_gold: { name: 'Oro Giallo 18k', type: 'metal', color: 0xd4af37, roughness: 0.15, metalness: 0.95 },
       metal_rosegold: { name: 'Oro Rosa', type: 'metal', color: 0xb76e79, roughness: 0.18, metalness: 0.92 },
       metal_silver: { name: 'Argento Lucido', type: 'metal', color: 0xe5e5e5, roughness: 0.1, metalness: 0.98 },
@@ -325,6 +279,7 @@ const C = hex => new THREE.Color(hex).convertSRGBToLinear();
       titanium_raw: { name: 'Titanio Grezzo', type: 'metal', color: 0x9a9da3, roughness: 0.45, metalness: 0.95 },
       copper: { name: 'Rame', type: 'metal', color: 0xb87333, roughness: 0.25, metalness: 0.95 },
 
+      // Naturali e tecnici (texture procedurali)
       wood_walnut: { name: 'Legno Noce', type: 'wood', baseColor: '#5b3a22', spotColor: '#2a160a' },
       wood_maple: { name: 'Legno Acero', type: 'wood', baseColor: '#d9b988', spotColor: '#9a7040' },
       wood_ebony: { name: 'Legno Ebano', type: 'wood', baseColor: '#1e1713', spotColor: '#050403' },
@@ -355,15 +310,27 @@ const C = hex => new THREE.Color(hex).convertSRGBToLinear();
       mirror_gold: { name: 'Specchio Oro', color: 0xdfb750, mirror: true },
       mirror_blue: { name: 'Specchio Blu', color: 0x1e88e5, mirror: true }
     };
+
+
 </script>
   <script>
     // =========================================================================
     // THREE.JS SETUP & SCENE GLOBALS
     // =========================================================================
     let scene, camera, renderer, controls;
-    let eyewearGroup;
-    let studioLightKey, studioLightFill, studioLightRim, groundPlane;
+    let eyewearGroup; // Main container for all 3D mesh components
+    let studioLightKey, studioLightFill, studioLightRim;
     let proceduralTextures = {};
+
+    // 3D Sub-meshes references for dynamic updates
+    let frontMesh = null;
+    let leftTempleMesh = null;
+    let rightTempleMesh = null;
+    let bridgeMesh = null;
+    let leftLensMesh = null;
+    let rightLensMesh = null;
+    let rivetsGroup = null;
+    let engravingMesh = null;
 
     window.onload = function() {
       initThreeJS();
@@ -374,17 +341,23 @@ const C = hex => new THREE.Color(hex).convertSRGBToLinear();
       animate();
     };
 
+    // =========================================================================
+    // THREE.JS INITIALIZATION
+    // =========================================================================
     function initThreeJS() {
       const container = document.getElementById('viewport-container');
       const canvas = document.getElementById('webgl-canvas');
 
+      // Scene
       scene = new THREE.Scene();
       scene.background = C(0x0b0c10);
 
+      // Camera
       camera = new THREE.PerspectiveCamera(35, container.clientWidth / container.clientHeight, 0.1, 100);
       camera.position.set(0, 5, 22);
 
-      renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true, preserveDrawingBuffer: true });
+      // Renderer
+      renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: false, preserveDrawingBuffer: true });
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
       renderer.setSize(container.clientWidth, container.clientHeight);
       renderer.shadowMap.enabled = true;
@@ -393,6 +366,7 @@ const C = hex => new THREE.Color(hex).convertSRGBToLinear();
       renderer.toneMapping = THREE.ACESFilmicToneMapping;
       renderer.toneMappingExposure = 1.1;
 
+      // OrbitControls
       controls = new THREE.OrbitControls(camera, renderer.domElement);
       controls.enableDamping = true;
       controls.dampingFactor = 0.05;
@@ -400,7 +374,8 @@ const C = hex => new THREE.Color(hex).convertSRGBToLinear();
       controls.minDistance = 8;
       controls.target.set(0, 0, 0);
 
-      const ambientLight = new THREE.AmbientLight(0xffffff, 0.45);
+      // Lights Studio Setup
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.25);
       scene.add(ambientLight);
 
       studioLightKey = new THREE.DirectionalLight(0xfff5ea, 1.8);
@@ -420,17 +395,20 @@ const C = hex => new THREE.Color(hex).convertSRGBToLinear();
       studioLightRim.position.set(0, -12, -15);
       scene.add(studioLightRim);
 
+      // Soft Ground Studio Plane
       const groundGeo = new THREE.PlaneGeometry(100, 100);
       const groundMat = new THREE.ShadowMaterial({ opacity: 0.3 });
-      groundPlane = new THREE.Mesh(groundGeo, groundMat);
-      groundPlane.rotation.x = -Math.PI / 2;
-      groundPlane.position.y = -6;
-      groundPlane.receiveShadow = true;
-      scene.add(groundPlane);
+      const ground = new THREE.Mesh(groundGeo, groundMat);
+      ground.rotation.x = -Math.PI / 2;
+      ground.position.y = -6;
+      ground.receiveShadow = true;
+      scene.add(ground);
 
+      // Eyewear Container Group
       eyewearGroup = new THREE.Group();
       scene.add(eyewearGroup);
 
+      // Responsive Resize Listener
       buildEnvironment();
       new ResizeObserver(onWindowResize).observe(container);
     }
@@ -441,25 +419,25 @@ const C = hex => new THREE.Color(hex).convertSRGBToLinear();
       camera.aspect = container.clientWidth / container.clientHeight;
       camera.updateProjectionMatrix();
       renderer.setSize(container.clientWidth, container.clientHeight);
-      const ov = document.getElementById('ar-overlay-canvas');
-      if (ov) {
-        ov.width = container.clientWidth;
-        ov.height = container.clientHeight;
-      }
     }
 
     function animate() {
       requestAnimationFrame(animate);
       
-      if (!arActive && state.autoRotate && eyewearGroup) {
+      if (state.autoRotate && eyewearGroup) {
         eyewearGroup.rotation.y += 0.008;
       }
       
-      if (!arActive) controls.update();
-      renderer.render(scene, camera);
+      if (typeof tryOnTick === 'function') tryOnTick();
+      controls.update();
+      renderer.render(scene, typeof activeCamera === 'function' ? activeCamera() : camera);
     }
 
+    // =========================================================================
+    // PROCEDURAL TEXTURES (Tortoiseshell & Engravings)
+    // =========================================================================
     function generateProceduralTextures() {
+      // 1. Tortoiseshell Canvas Texture Generator
       ['tortoise_classic', 'tortoise_honey', 'tortoise_dark'].forEach(key => {
         const matData = MATERIALS_DB[key];
         const canvas = document.createElement('canvas');
@@ -470,6 +448,7 @@ const C = hex => new THREE.Color(hex).convertSRGBToLinear();
         ctx.fillStyle = matData.baseColor;
         ctx.fillRect(0, 0, 512, 512);
 
+        // Organic dark spots
         ctx.fillStyle = matData.spotColor;
         for (let i = 0; i < 400; i++) {
           const x = Math.random() * 512;
@@ -508,6 +487,8 @@ const C = hex => new THREE.Color(hex).convertSRGBToLinear();
       return tex;
     }
 
+
+    // Ambiente da studio procedurale (softbox) → riflessi su metalli, acetato e lenti
     function buildEnvironment() {
       const pm = new THREE.PMREMGenerator(renderer), es = new THREE.Scene();
       es.background = new THREE.Color(0x15171c);
@@ -521,6 +502,7 @@ const C = hex => new THREE.Color(hex).convertSRGBToLinear();
       pm.dispose();
     }
 
+    // Texture procedurali: legno, osso, corno, carbonio
     function generateMaterialTextures() {
       const R = Math.random;
       const rgba = (h, a) => `rgba(${parseInt(h.slice(1, 3), 16)},${parseInt(h.slice(3, 5), 16)},${parseInt(h.slice(5, 7), 16)},${a})`;
@@ -557,19 +539,20 @@ const C = hex => new THREE.Color(hex).convertSRGBToLinear();
         proceduralTextures[key] = t;
       });
     }
+
 </script>
   <script>
 // =========================================================================
-// GEOMETRIA ORGANICA: contorni a spline (24pt), bordi a sezione variabile,
+// GEOMETRIA ORGANICA: contorni a spline, bordi a sezione variabile,
 // ponte e aste per "sweep", curvatura frontale (wrap), lenti bombate
 // =========================================================================
 const V3 = (x, y, z) => new THREE.Vector3(x, y, z);
-const CONTOUR_COUNT = 24;
-const SHAPES = {
+const SHAPES = { // fallback superellittico per le forme "geometriche" (tondi, ovali, ...)
   wayfarer: {}, aviator: {}, cateye: {}, panthos: {}, boston: {},
   moscot: { n: 2.5, hs: 1 }, tondi: { n: 2, round: true }, ovali: { n: 2.1, hs: 0.8 },
   rect: { n: 4.5, hs: 0.74 }, wellington: { n: 3.4, hs: 0.88, taper: 0.06 }, sport: { n: 2.6, hs: 0.74, taper: -0.05, lift: 0.14 }
 };
+// Contorni disegnati a mano (x: -1 naso … +1 esterno; y: -1 basso … +1 alto), antiorari
 const SHAPE_PTS = {
   wayfarer: [[1.02,.35],[.9,.85],[.35,1],[-.35,.97],[-.92,.9],[-1,.45],[-.93,-.25],[-.7,-.78],[-.2,-1],[.4,-.97],[.9,-.65],[1.05,-.1]],
   aviator:  [[.98,.15],[.88,.75],[.35,1],[-.4,.98],[-.95,.75],[-1,.2],[-.9,-.45],[-.55,-.92],[-.1,-1.05],[.4,-.9],[.8,-.5],[.98,-.15]],
@@ -593,8 +576,8 @@ function lensPoints(type, w, h, count = 140) {
       const t = (i / count) * Math.PI * 2, c = Math.cos(t), s = Math.sin(t);
       let x = a * Math.sign(c) * Math.pow(Math.abs(c), 2 / p.n), y = b * Math.sign(s) * Math.pow(Math.abs(s), 2 / p.n);
       x *= 1 + (p.taper || 0) * (y / b);
-      if (x < 0 && y < 0) x *= 1 - 0.12 * (-y / b);
-      y += (0.04 + (p.lift || 0) * Math.max(0, x / a)) * b * (x / a);
+      if (x < 0 && y < 0) x *= 1 - 0.12 * (-y / b);            // scalatura nasale
+      y += (0.04 + (p.lift || 0) * Math.max(0, x / a)) * b * (x / a); // lieve rialzo esterno
       pts.push(new THREE.Vector2(x, y));
     }
   }
@@ -605,11 +588,15 @@ function lensPoints(type, w, h, count = 140) {
 const normals2D = pts => pts.map((p, i) => {
   const a = pts[(i + pts.length - 1) % pts.length], c = pts[(i + 1) % pts.length];
   const t = new THREE.Vector2(c.x - a.x, c.y - a.y).normalize();
-  return new THREE.Vector2(t.y, -t.x);
+  return new THREE.Vector2(t.y, -t.x); // normale verso l'esterno
 });
 const endCap = (u, s, e) => Math.min(Math.sqrt(Math.min(1, u / s)), Math.sqrt(Math.min(1, (1 - u) / e)));
+
+// Spigolosità: 0 = profilo tondo (n=2), 100 = quasi squadrato (n=10). Le sezioni "tonde" (fili) restano tonde fino al 15%.
 const nSharp = (s, round) => (round ? 2 + Math.max(0, s - 15) * 0.094 : 2 + s * 0.08);
 
+// Sweep: sezione superellittica (a, b) lungo punti P con assi locali A, B.
+// Le normali sono calcolate dal profilo (non mediate): gli spigoli restano netti anche con poche facce.
 function sweepGeo(P, A, B, prof, closed, n = 3.2, seg = 12) {
   seg = Math.max(seg, n > 5.5 ? 32 : n > 4 ? 22 : 12);
   const N = P.length, pos = [], nor = [], uv = [], idx = [], e = 2 / n;
@@ -642,6 +629,7 @@ function sweepGeo(P, A, B, prof, closed, n = 3.2, seg = 12) {
   return g;
 }
 
+// Curvatura frontale: le estremità si piegano all'indietro (le normali seguono la deformazione)
 function bend(g, K) {
   const p = g.attributes.position;
   for (let i = 0; i < p.count; i++) p.setZ(i, p.getZ(i) - K * p.getX(i) * p.getX(i));
@@ -670,8 +658,10 @@ function disposeTree(group) {
 }
 const addMesh = (g, mat, part, shadow = true) => { const m = new THREE.Mesh(g, mat); m.castShadow = shadow; if (part) m.userData.part = part; eyewearGroup.add(m); return m; };
 
+// Visiera sportiva: un'unica lente avvolgente con scalatura nasale al centro
 const SHIELD_PTS = [[1,.1],[.95,.55],[.6,.85],[.15,.9],[-.15,.9],[-.6,.85],[-.95,.55],[-1,.1],[-.92,-.35],[-.6,-.62],[-.25,-.64],[-.1,-.42],[0,-.3],[.1,-.42],[.25,-.64],[.6,-.62],[.92,-.35]];
 
+// x del contorno (lente destra) alla quota y: pick = Math.min (interno) o Math.max (esterno)
 function edgeX(pts, y, pick) {
   let r = null;
   for (let i = 0; i < pts.length; i++) {
@@ -681,6 +671,7 @@ function edgeX(pts, y, pick) {
   return r === null ? pick(...pts.map(p => p.x)) : r;
 }
 
+// Divide il contorno in arco superiore (sopra la quota cut) e arco inferiore, a prescindere dal punto di partenza
 function arcSplit(pts, cut) {
   const N = pts.length; let k = 0; pts.forEach((p, i) => { if (p.y < pts[k].y) k = i; });
   const rot = [...pts.keys()].map(i => (i + k) % N), up = rot.filter(i => pts[i].y > cut);
@@ -689,6 +680,7 @@ function arcSplit(pts, cut) {
   return { up, low: [...rot.slice(l + 1), ...rot.slice(0, f)] };
 }
 
+// Lente bombata con spessore (due superfici + bordo) e UV verticali per le sfumature
 function lensGeo(pts, x0, K) {
   const R = 7, N = pts.length, T = 0.08, c = pts.reduce((s, p) => s.add(p), new THREE.Vector2()).divideScalar(N);
   const ys = pts.map(p => p.y), y0 = Math.min(...ys), span = (Math.max(...ys) - y0) || 1;
@@ -708,9 +700,10 @@ function lensGeo(pts, x0, K) {
   return bend(g, K);
 }
 
+// Bordo: sweep lungo il contorno, sezione più spessa in alto e all'angolo esterno
 function rimGeo(pts, x0, rt, depth, half, cut, metal, K, ab) {
   const N = pts.length, nr = normals2D(pts), side = x0 > 0 ? 1 : -1, wf = weightFn(ab, side);
-  const a = Math.max(...pts.map(p => Math.abs(p.x))), b = Math.max(...pts.map(p => Math.abs(p.y)));
+  const a = Math.max(...pts.map(p => Math.abs(p.x))), b = Math.max(...pts.map(p => p.y));
   const idx = half ? arcSplit(pts, cut).up : [...pts.keys()];
   const P = [], A = [], B = [], WR = [];
   idx.forEach(i => {
@@ -724,6 +717,7 @@ function rimGeo(pts, x0, rt, depth, half, cut, metal, K, ab) {
   return bend(g, K);
 }
 
+// Parte bassa della lente sostenuta da filo di nylon, filo o fascia in un altro materiale
 function addLowerSupport(pts, x, cut, type, D) {
   const sp = arcSplit(pts, cut);
   if (!sp.low.length) return;
@@ -740,6 +734,7 @@ function addLowerSupport(pts, x, cut, type, D) {
   addMesh(bend(g, D.K), getMaterialObject(state.lowerMaterial), 'lower');
 }
 
+// Dimensioni comuni della montatura (usate da geometria e modellatore)
 function frameDims() {
   const w = state.lensWidth / 10, h = state.lensHeight / 10, bw = state.bridgeWidth / 10, thick = state.thickness / 10;
   const metal = MATERIALS_DB[state.frontMaterial].type === 'metal', rt = metal ? Math.min(thick, 0.12) : thick, shield = state.construction === 'shield';
@@ -785,29 +780,19 @@ function buildEyewear3D() {
   const tips = buildTemples3D(templeInfo(), silver, frontMat);
   buildStrap(tips);
 
-  // Occlusore testa invisibile per nascondere la parte finale delle aste dietro tempie/orecchie in modalità AR
-  if (typeof arActive !== 'undefined' && arActive) {
-    const occGeo = new THREE.CylinderGeometry(1, 0.85, D.h * 4.2, 28, 1, false);
-    occGeo.scale((D.w + D.bw / 2) * 0.88, 1, D.w * 1.15);
-    const occMat = new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: true });
-    const occ = new THREE.Mesh(occGeo, occMat);
-    occ.position.set(0, -D.h * 0.4, -D.w * 1.65);
-    occ.renderOrder = -1;
-    eyewearGroup.add(occ);
-  }
-
   document.getElementById('spec-size').innerText = `${Math.round(state.lensWidth)}▢${Math.round(state.bridgeWidth)} - ${state.templeLength}`;
   document.getElementById('spec-shape').innerText = shield ? 'SPORT' : state.shape.toUpperCase();
   if (typeof buildHandles === 'function') buildHandles();
   if (typeof syncUI === 'function') { syncUI(); updatePrice(); }
 }
 
+// Ponte: arco sweppato le cui estremità finiscono dentro il bordo, alla quota esatta di attacco
 function buildBridge3D(D, R) {
   const { h, bw, rt, depth, metal, cx, K } = D, b = h / 2, t = state.bridge, mat = getMaterialObject(state.bridgeMaterial);
   const rw = y => (metal ? rt : rt * (0.72 + 0.45 * Math.max(0, y / b)));
   const half = y => Math.max(0.1, cx + edgeX(R, y, Math.min) - rw(y) * 0.5);
   const mk = (ys0, lift, aY, bZ, n) => {
-    const ys = ys0 + state.bridgeY * h, e = half(ys); n = nSharp(state.edgeBridge, n <= 2);
+    const ys = ys0 + state.bridgeY * h, e = half(ys); n = nSharp(state.edgeBridge, n <= 2); lift *= state.bridgeLift / 100;
     const cv = new THREE.CatmullRomCurve3([[-e, ys, 0], [-e * 0.5, ys + lift * 0.8, 0], [0, ys + lift, 0], [e * 0.5, ys + lift * 0.8, 0], [e, ys, 0]].map(p => V3(...p)));
     const P = cv.getPoints(30), A = P.map(() => V3(0, 1, 0)), B = P.map(() => V3(0, 0, 1));
     const g = sweepGeo(P, A, B, i => { const ed = Math.pow(Math.abs(i / 30 * 2 - 1), 4); return [aY * (1 + 0.5 * ed), bZ * (1 + 0.3 * ed)]; }, false, n, 12);
@@ -834,6 +819,7 @@ function buildBridge3D(D, R) {
   } else mk(h * 0.2, h * 0.07, rt * 0.35, depth * 0.38, 3);
 }
 
+// Aste rastremate: alte vicino alla cerniera, più sottili verso l'orecchio
 const TEMPLES = {
   curved:     { w: 0.10, h0: 0.30, h1: 0.15, bend: 0.72, drop: 2.1 },
   straight:   { w: 0.10, h0: 0.30, h1: 0.15, bend: 1, drop: 0 },
@@ -842,30 +828,24 @@ const TEMPLES = {
   wide:       { w: 0.09, h0: 0.42, h1: 0.40, bend: 0.74, drop: 2 },
   thin_metal: { w: 0.05, h0: 0.05, h1: 0.05, bend: 0.72, drop: 2.1, round: true }
 };
-const TU = [0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1];
-const TCURVE_U = [0.2, 0.4, 0.6, 0.8, 1.0];
+const tuOf = n => [...Array(n).keys()].map(k => k / (n - 1));
+const TU = tuOf(5);
 
+// Semi-altezza della sezione dell'asta lungo u∈[0,1] (stile oppure profilo modellato a mano)
 function tempH(u, T) {
   const P = state.templeProf;
-  if (!P || P.length < 2) { const sm = Math.min(1, u * 1.1); return T.h0 + (T.h1 - T.h0) * sm * sm * (3 - 2 * sm); }
-  const maxIdx = P.length - 1;
-  const x = Math.min(0.9999, Math.max(0, u)) * maxIdx, i = Math.floor(x), f = x - i, s = f * f * (3 - 2 * f);
+  if (!P) { const sm = Math.min(1, u * 1.1); return T.h0 + (T.h1 - T.h0) * sm * sm * (3 - 2 * sm); }
+  const x = Math.min(0.9999, u) * (P.length - 1), i = Math.floor(x), f = x - i, s = f * f * (3 - 2 * f);
   return P[i] * (1 - s) + P[i + 1] * s;
 }
-function templeLineBase(T, L, s) {
-  const D = T.drop, bz = T.bend;
+function templeLine(T, L, s) {
+  const D = state.templeDrop != null ? state.templeDrop : T.drop;
+  const bz = D > 0 ? Math.min(state.templeBend != null ? state.templeBend : T.bend, 0.93) : 1;
   const ctrl = D ? [[0, 0, 0], [0, 0, -L * 0.35], [0, 0, -L * bz], [-s * 0.15, -D * 0.25, -L * (bz + (1 - bz) * 0.5)], [-s * 0.35, -D * 0.7, -L * (bz + (1 - bz) * 0.85)], [-s * 0.4, -D, -L]]
                  : [[0, 0, 0], [0, 0, -L * 0.5], [0, 0, -L]];
   return new THREE.CatmullRomCurve3(ctrl.map(p => V3(...p))).getSpacedPoints(80);
 }
-function templeLine(T, L, s) {
-  if (!state.templeCurve || state.templeCurve.length !== TCURVE_U.length) return templeLineBase(T, L, s);
-  const ctrl = [[0, 0, 0], ...TCURVE_U.map((u, k) => {
-    const xOff = u > 0.72 ? -s * 0.4 * ((u - 0.72) / 0.28) : 0;
-    return [xOff, state.templeCurve[k], -L * u];
-  })];
-  return new THREE.CatmullRomCurve3(ctrl.map(p => V3(...p))).getSpacedPoints(80);
-}
+// Punto di attacco: sul bordo esterno della lente, alla quota della cerniera
 function templeInfo() {
   const D = frameDims(), T = TEMPLES[state.templeStyle] || TEMPLES.curved, L = state.templeLength / 10;
   let sx, y;
@@ -882,6 +862,7 @@ function buildTemples3D(I, silver, frontMat) {
   const { D, T, sx, y, z, th } = I, SEG = 80, cut = Math.round(SEG * 0.78), up = V3(0, 1, 0), wT = T.w * state.templeW / 100, K = D.K;
   const mBody = getMaterialObject(state.templeMaterial), mTip = getMaterialObject(state.tipMaterial), tips = [];
   [-1, 1].forEach(s => {
+    // terminale (endpiece): collega il bordo alla cerniera
     const ew = D.metal ? 0.07 : 0.14, eh = D.metal ? 0.09 : T.h0 * 0.9, zf = D.depth * 0.15, zr = -D.depth * 0.9 + 0.12;
     const EP = [...Array(9).keys()].map(i => V3(s * sx, y, zf + (zr - zf) * i / 8));
     addMesh(bend(sweepGeo(EP, EP.map(() => V3(1, 0, 0)), EP.map(() => V3(0, 1, 0)), i => { const k = Math.min(1, Math.sqrt(i / 8 / 0.2 + 0.001)); return [ew * k, eh * k]; }, false, nSharp(state.edgeFront, D.metal)), K), frontMat, 'front');
@@ -911,6 +892,7 @@ function buildTemples3D(I, silver, frontMat) {
   return tips;
 }
 
+// Fascia posteriore: cordino, elastica o fascia sport larga, tra le punte delle aste
 function buildStrap(tips) {
   if (state.strap === 'none' || !tips[0] || !tips[1]) return;
   const [tl, tr] = tips, y = tl.y, zE = tl.z, sag = state.strap === 'cord' ? 2.4 : 3.2;
@@ -934,6 +916,9 @@ function buildRivets3D(w, h, bw, rt, depth, cx, K) {
   });
 }
 
+// =========================================================================
+// MATERIALI (colori convertiti sRGB → lineare con C())
+// =========================================================================
 function getMaterialObject(key) {
   const d = MATERIALS_DB[key] || MATERIALS_DB.acetate_black;
   if (['wood', 'bone', 'horn', 'carbon'].includes(d.type)) {
@@ -965,6 +950,7 @@ function getLensMaterial() {
   }
   return new THREE.MeshPhysicalMaterial({ ...base, color: C(c.color), opacity: o });
 }
+
 </script>
   <script>
 // =========================================================================
@@ -996,7 +982,7 @@ function optsGrid(key, opts, cols) {
     b.onclick = () => {
       state[key] = v;
       if (key === 'shape' && v !== 'custom') { state.customPts = state.customW = null; if (typeof modelMode !== 'undefined' && modelMode && modelMode !== 'size') { ensureCustom(); state.shape = 'custom'; } }
-      if (key === 'templeStyle') { state.templeProf = null; state.templeCurve = null; }
+      if (key === 'templeStyle') { state.templeProf = null; state.templeBend = state.templeDrop = null; }
       if (key === 'lower' && v !== 'same') state.lowerThick = { nylon: 0.4, wire: 1, band: 3 }[v];
       if (key === 'strap' && v !== 'none' && v !== 'cord') state.strapWidth = v === 'sport' ? 25 : 12;
       if (key === 'construction' && v === 'shield' && state.strap === 'none') { state.strap = 'sport'; state.strapWidth = 25; }
@@ -1034,6 +1020,7 @@ function lensColors() {
   return g;
 }
 
+// ---- Materiali: scelta della parte + selettore per categoria
 function setMaterial(k) {
   if (state.syncMaterials && !NOSYNC.includes(state.activePart)) SYNC_MAT.forEach(p => state[p] = k);
   else state[PART_MAT[state.activePart]] = k;
@@ -1077,6 +1064,7 @@ function materialSection() {
   return d;
 }
 
+// ---- Dettagli: incisione, laser, rivetti, codice
 function detailsSection() {
   const d = h('div', 'space-y-5');
   const eng = h('div', 'bg-slate-900/70 p-4 rounded-xl border border-slate-800/80 space-y-3',
@@ -1132,7 +1120,7 @@ const TABS = [
   ] },
   { id: 'bridge', label: 'Ponte', icon: 'fa-bridge', sections: [
     { t: 'Tipo di ponte', el: () => optsGrid('bridge', BRIDGES, 2) },
-    { t: 'Dimensione', el: () => sliderBlock([['bridgeWidth', 'Larghezza ponte', 14, 24, 1, 'mm'], ['edgeBridge', 'Spigolosità ponte (0 tondo · 100 vivo)', 0, 100, 1, '%']]) }
+    { t: 'Dimensione', el: () => sliderBlock([['bridgeWidth', 'Larghezza ponte', 14, 24, 1, 'mm'], ['edgeBridge', 'Spigolosità ponte (0 tondo · 100 vivo)', 0, 100, 1, '%'], ['bridgeLift', 'Altezza arco del ponte', 30, 250, 5, '%']]) }
   ] },
   { id: 'temples', label: 'Aste', icon: 'fa-ruler', sections: [
     { t: 'Modello asta', el: () => optsGrid('templeStyle', TEMPLE_OPTS, 2) },
@@ -1167,12 +1155,13 @@ function switchTab(id) {
   document.getElementById('tabnav-' + id).classList.add('active-tab');
 }
 
+// Clic sul modello 3D → seleziona la parte
 function initPicking() {
   const cv = renderer.domElement, rc = new THREE.Raycaster(), mv = new THREE.Vector2();
   let down = null;
   cv.addEventListener('pointerdown', e => down = [e.clientX, e.clientY]);
   cv.addEventListener('pointerup', e => {
-    if (modelMode || arActive || !down || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 5) return;
+    if (modelMode || !down || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 5) return;
     const r = cv.getBoundingClientRect();
     mv.set((e.clientX - r.left) / r.width * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
     rc.setFromCamera(mv, camera);
@@ -1184,6 +1173,9 @@ function initPicking() {
   });
 }
 
+// =========================================================================
+// SYNC STATE → UI, PREZZO, CODICE
+// =========================================================================
 function syncUI() {
   document.querySelectorAll('[data-key][data-val]').forEach(b => {
     const on = state[b.dataset.key] === b.dataset.val;
@@ -1221,15 +1213,16 @@ function updatePrice() {
 }
 
 const CODE_KEYS = ['shape', 'construction', 'bridge', 'templeStyle', 'frontMaterial', 'bridgeMaterial', 'templeMaterial', 'tipMaterial', 'lensType', 'lensColor', 'rivets',
-  'lensWidth', 'lensHeight', 'bridgeWidth', 'thickness', 'templeLength', 'templeSplay', 'lensOpacity', 'frameWrap', 'bridgeY', 'strap', 'strapMaterial', 'strapWidth', 'frameDepth', 'templeW', 'lower', 'lowerMaterial', 'lowerCut', 'lowerThick', 'edgeFront', 'edgeBridge', 'edgeTemple', 'syncMaterials'];
-const NUM_KEYS = new Set(['lensWidth', 'lensHeight', 'bridgeWidth', 'thickness', 'templeLength', 'templeSplay', 'lensOpacity', 'frameWrap', 'bridgeY', 'strapWidth', 'frameDepth', 'templeW', 'lowerCut', 'lowerThick', 'edgeFront', 'edgeBridge', 'edgeTemple']);
+  'lensWidth', 'lensHeight', 'bridgeWidth', 'thickness', 'templeLength', 'templeSplay', 'lensOpacity', 'frameWrap', 'bridgeY', 'strap', 'strapMaterial', 'strapWidth', 'frameDepth', 'templeW', 'lower', 'lowerMaterial', 'lowerCut', 'lowerThick', 'edgeFront', 'edgeBridge', 'edgeTemple', 'bridgeLift', 'syncMaterials'];
+const NUM_KEYS = new Set(['lensWidth', 'lensHeight', 'bridgeWidth', 'thickness', 'templeLength', 'templeSplay', 'lensOpacity', 'frameWrap', 'bridgeY', 'strapWidth', 'frameDepth', 'templeW', 'lowerCut', 'lowerThick', 'edgeFront', 'edgeBridge', 'edgeTemple', 'bridgeLift']);
 
 function exportCode() {
   const base = CODE_KEYS.map(k => `${k}=${NUM_KEYS.has(k) && k === 'bridgeY' ? state[k].toFixed(3) : state[k]}`);
   if (state.shape === 'custom' && state.customPts)
     base.push('customPts=' + state.customPts.map(p => p.map(n => n.toFixed(3)).join(',')).join('|'), 'customW=' + state.customW.map(n => n.toFixed(2)).join(','));
   if (state.templeProf) base.push('templeProf=' + state.templeProf.map(n => n.toFixed(3)).join(','));
-  if (state.templeCurve) base.push('templeCurve=' + state.templeCurve.map(n => n.toFixed(3)).join(','));
+  if (state.templeBend != null) base.push('templeBend=' + state.templeBend.toFixed(3));
+  if (state.templeDrop != null) base.push('templeDrop=' + state.templeDrop.toFixed(2));
   return base.join(';');
 }
 function importCode(str) {
@@ -1237,8 +1230,8 @@ function importCode(str) {
   str.split(/[;\n]+/).forEach(p => {
     const [k, ...r] = p.split('='), key = k && k.trim(), v = r.join('=').trim();
     if (key === 'customPts') { state.customPts = v.split('|').map(s => s.split(',').map(parseFloat)); n++; return; }
+    if (key === 'templeBend' || key === 'templeDrop') { state[key] = parseFloat(v); n++; return; }
     if (key === 'templeProf') { state.templeProf = v.split(',').map(parseFloat); n++; return; }
-    if (key === 'templeCurve') { state.templeCurve = v.split(',').map(parseFloat); n++; return; }
     if (key === 'customW') { state.customW = v.split(',').map(parseFloat); n++; return; }
     if (!CODE_KEYS.includes(key)) return;
     if (NUM_KEYS.has(key)) { if (isNaN(parseFloat(v))) return; state[key] = parseFloat(v); }
@@ -1252,8 +1245,10 @@ function importCode(str) {
   showToast(n ? `Codice caricato (${n} parametri)` : 'Codice non valido');
 }
 
+// =========================================================================
+// AZIONI
+// =========================================================================
 function setCameraPreset(preset) {
-  if (arActive) return;
   eyewearGroup.rotation.y = 0;
   state.autoRotate = false;
   document.getElementById('btn-autorotate').classList.remove('bg-brand-gold', 'text-black');
@@ -1269,7 +1264,7 @@ function gsapCameraMove(px, py, pz, tx, ty, tz) {
   })(t0);
 }
 function toggleAutoRotate() {
-  if (modelMode || arActive) return;
+  if (modelMode) return;
   state.autoRotate = !state.autoRotate;
   const b = document.getElementById('btn-autorotate');
   b.classList.toggle('bg-brand-gold', state.autoRotate); b.classList.toggle('text-black', state.autoRotate);
@@ -1281,12 +1276,11 @@ function setStudioEnv(k) {
     b.classList.toggle('bg-slate-800', on); b.classList.toggle('text-brand-gold', on); b.classList.toggle('font-bold', on); b.classList.toggle('text-slate-400', !on);
   });
   const cfg = { light: [0xf1f5f9, 0xffffff, 2.0], warm: [0x1a1410, 0xffdfb3, 2.2], dark: [0x0b0c10, 0xfff5ea, 1.8] }[k];
-  if (!arActive) scene.background = C(cfg[0]);
-  studioLightKey.color.setHex(cfg[1]); studioLightKey.intensity = cfg[2];
+  scene.background = C(cfg[0]); studioLightKey.color.setHex(cfg[1]); studioLightKey.intensity = cfg[2];
 }
 function randomizeEyewear() {
   const pick = a => a[Math.floor(Math.random() * a.length)], mats = Object.keys(MATERIALS_DB);
-  state.shape = pick(SHAPE_LIST)[0]; state.construction = pick(['full', 'half', 'rimless', 'shield']); state.strap = state.construction === 'shield' ? 'sport' : pick(['none', 'none', 'cord', 'elastic']); state.templeProf = null; state.templeCurve = null; state.customPts = null; state.customW = null;
+  state.shape = pick(SHAPE_LIST)[0]; state.construction = pick(['full', 'half', 'rimless', 'shield']); state.strap = state.construction === 'shield' ? 'sport' : pick(['none', 'none', 'cord', 'elastic']); state.templeProf = null;
   state.bridge = pick(BRIDGES)[0]; state.templeStyle = pick(TEMPLE_OPTS)[0];
   state.syncMaterials = Math.random() < 0.35;
   SYNC_MAT.forEach(p => state[p] = pick(mats));
@@ -1298,34 +1292,10 @@ function randomizeEyewear() {
   showToast('🎲 Generata nuova combinazione unica!');
 }
 function takeScreenshot() {
+  if (typeof TRY !== 'undefined' && TRY.active) return tryOnPhoto();
   renderer.render(scene, camera);
   const a = document.createElement('a');
-  a.download = `OJO_Occhiale_${arActive ? 'ProvaAR' : 'Custom'}_${Date.now()}.png`;
-  if (arActive) {
-    const vid = document.getElementById('ar-video');
-    const gl = renderer.domElement;
-    const out = document.createElement('canvas');
-    out.width = gl.width; out.height = gl.height;
-    const ctx = out.getContext('2d');
-    if (vid.videoWidth && vid.videoHeight) {
-      const va = vid.videoWidth / vid.videoHeight, ca = out.width / out.height;
-      let sx = 0, sy = 0, sw = vid.videoWidth, sh = vid.videoHeight;
-      if (va > ca) { sw = vid.videoHeight * ca; sx = (vid.videoWidth - sw) / 2; }
-      else { sh = vid.videoWidth / ca; sy = (vid.videoHeight - sh) / 2; }
-      ctx.save();
-      if (arFacingMode === 'user') {
-        ctx.translate(out.width, 0);
-        ctx.scale(-1, 1);
-      }
-      ctx.drawImage(vid, sx, sy, sw, sh, 0, 0, out.width, out.height);
-      ctx.restore();
-    }
-    ctx.drawImage(gl, 0, 0);
-    a.href = out.toDataURL('image/png');
-  } else {
-    a.href = renderer.domElement.toDataURL('image/png');
-  }
-  a.click();
+  a.download = `OJO_Occhiale_Custom_${Date.now()}.png`; a.href = renderer.domElement.toDataURL('image/png'); a.click();
   showToast('Immagine PNG salvata!');
 }
 function showOrderToast() { showToast('✨ Progetto salvato! Codice: ' + exportCode().slice(0, 40) + '…'); }
@@ -1336,31 +1306,35 @@ function showToast(msg) {
   clearTimeout(showToast._t);
   showToast._t = setTimeout(() => { t.classList.remove('translate-y-0', 'opacity-100'); t.classList.add('translate-y-[-100px]', 'opacity-0'); }, 3000);
 }
+
 </script>
   <script>
 // =========================================================================
-// MODELLAZIONE DIRETTA AD ALTA DENSITÀ DI PUNTI:
-//  pts   = 24 nodi sul contorno della lente
-//  thick = 24 nodi radiali sullo spessore della montatura
-//  asta  = 9 nodi profilo altezza (viola) + 5 nodi curvatura asta (turchese)
-//  size  = 6 nodi su lente, ponte e aste
+// MODELLAZIONE DIRETTA: maniglie trascinabili sul modello 3D
+//  pts   = muovi i punti del contorno lente (si specchia sull'altra lente)
+//  thick = tira il bordo: spessore locale della montatura
+//  size  = ingrandisci lente, ponte (larghezza/altezza) e aste (lunghezza/apertura)
 // =========================================================================
-let handleGroup = null, modelMode = null, dragH = null, hoveredH = null;
+let handleGroup = null, modelMode = null, dragH = null, selPt = 0;
 const MODE_INFO = {
-  pts: ['Contorno (24pt)', 'Trascina i 24 punti dorati per scolpire la lente con precisione'],
-  thick: ['Spessore (24pt)', 'Trascina i 24 punti rosa per variare lo spessore locale della montatura'],
-  asta: ['Aste (14pt)', 'Viola: profilo altezza (9 nodi) · Turchese: curvatura verticale asta (5 nodi)'],
-  size: ['Misure (6pt)', 'Azzurro: lente · Verde: ponte · Arancio/Giallo: asta e apertura']
+  pts: ['Contorno', 'Trascina i punti; selezionane uno e usa ＋ / − per aggiungerne o toglierne (bianco = selezionato)'],
+  thick: ['Spessore', 'Trascina i punti rosa: più lontano = bordo più spesso'],
+  asta: ['Aste', 'Viola: altezza sezione · giallo: dove piega · verde: caduta dietro l’orecchio'],
+  size: ['Misure', 'Azzurro: lente · Verde: ponte · Arancio: asta']
 };
 
 function ensureCustom() {
   if (state.customPts) return;
-  const w = state.lensWidth / 10, h = state.lensHeight / 10;
-  const P = lensPoints(state.shape, w, h, CONTOUR_COUNT);
-  state.customPts = P.map(p => [p.x / (w / 2), p.y / (h / 2)]);
+  const q = SHAPE_PTS[state.shape];
+  if (q) state.customPts = q.map(p => p.slice());
+  else {
+    const w = state.lensWidth / 10, h = state.lensHeight / 10, P = lensPoints(state.shape, w, h);
+    state.customPts = [...Array(12).keys()].map(i => { const p = P[Math.floor(i * P.length / 12)]; return [p.x / (w / 2), p.y / (h / 2)]; });
+  }
   state.customW = state.customPts.map(() => 1);
 }
 
+// Peso dello spessore locale, interpolato per angolo attorno al centro della lente
 function weightFn(ab, side) {
   const q = state.shape === 'custom' && state.customPts, W = state.customW;
   if (!ab || !q || !W) return () => 1;
@@ -1378,17 +1352,12 @@ function weightFn(ab, side) {
 }
 
 function ensureTempleProf() {
-  if (!state.templeProf) {
-    const T = TEMPLES[state.templeStyle] || TEMPLES.curved;
-    state.templeProf = TU.map(u => tempH(u, T));
-  }
-  if (!state.templeCurve) {
-    const T = TEMPLES[state.templeStyle] || TEMPLES.curved, L = state.templeLength / 10;
-    const base = templeLineBase(T, L, 1);
-    state.templeCurve = TCURVE_U.map(u => base[Math.round(u * 80)].y);
-  }
+  if (state.templeProf) return;
+  const T = TEMPLES[state.templeStyle] || TEMPLES.curved;
+  state.templeProf = TU.map(u => tempH(u, T));
 }
 
+// Posizione della punta dell'asta destra (maniglia "Misure")
 function tipPos() {
   const I = templeInfo(), p = I.line(1)[80], c = Math.cos(I.th), s = Math.sin(I.th);
   return { x: I.sx + p.x * c - p.z * s, y: I.y + p.y, z: I.z + p.x * s + p.z * c, I };
@@ -1397,21 +1366,12 @@ function tipPos() {
 function buildHandles() {
   if (!handleGroup) { handleGroup = new THREE.Group(); scene.add(handleGroup); }
   while (handleGroup.children.length) { const o = handleGroup.children[0]; handleGroup.remove(o); o.geometry.dispose(); o.material.dispose(); }
-  if (!modelMode || arActive) return;
+  if (!modelMode) return;
   const D = frameDims(), { w, h, bw, K, cx, rt, shield } = D, a = w / 2, b = h / 2;
   const mode = shield && (modelMode === 'pts' || modelMode === 'thick') ? 'size' : modelMode;
-  const rad = (mode === 'pts' || mode === 'thick') ? 0.088 : 0.11;
   const add = (kind, i, x, y, col, z, side) => {
-    const isActive = (dragH && dragH.kind === kind && dragH.i === i && dragH.s === side) ||
-                     (hoveredH && hoveredH.kind === kind && hoveredH.i === i && hoveredH.s === side);
-    const m = new THREE.Mesh(
-      new THREE.SphereGeometry(rad * (isActive ? 1.4 : 1), 16, 12),
-      new THREE.MeshBasicMaterial({ color: isActive ? 0xffffff : col, depthTest: false, transparent: true, opacity: 0.96 })
-    );
-    m.position.set(x, y, z !== undefined ? z : 0.5 - K * x * x);
-    m.renderOrder = 10;
-    m.userData.handle = { kind, i, s: side, baseCol: col };
-    handleGroup.add(m);
+    const m = new THREE.Mesh(new THREE.SphereGeometry(0.12, 16, 12), new THREE.MeshBasicMaterial({ color: col, depthTest: false, transparent: true, opacity: 0.95 }));
+    m.position.set(x, y, z !== undefined ? z : 0.5 - K * x * x); m.renderOrder = 10; m.userData.handle = { kind, i, s: side }; handleGroup.add(m);
   };
   if (mode === 'pts' || mode === 'thick') {
     const q = state.customPts, c = q.reduce((s, p) => [s[0] + p[0] / q.length, s[1] + p[1] / q.length], [0, 0]);
@@ -1421,36 +1381,26 @@ function buildHandles() {
         const dx = p[0] - c[0], dy = p[1] - c[1], d = Math.hypot(dx * a, dy * b) || 1, r = rt * 0.9 * state.customW[i];
         x += (dx * a / d) * r; y += (dy * b / d) * r;
       }
-      add(mode, i, x, y, mode === 'pts' ? 0xD4AF37 : 0xf472b6);
+      add(mode, i, x, y, i === selPt ? 0xffffff : (mode === 'pts' ? 0xD4AF37 : 0xf472b6));
     });
   } else if (mode === 'asta') {
     ensureTempleProf();
-    const I = templeInfo(), off = I.T.w * state.templeW / 100 + 0.06;
+    const I = templeInfo(), off = I.T.w * state.templeW / 100 + 0.06, tu = tuOf(state.templeProf.length);
+    const Dd = state.templeDrop != null ? state.templeDrop : I.T.drop, bz = Dd > 0 ? Math.min(state.templeBend != null ? state.templeBend : I.T.bend, 0.93) : 1;
     [1, -1].forEach(sd => {
       const pts = I.line(sd), ang = -sd * I.th, c = Math.cos(ang), s = Math.sin(ang);
-      TU.forEach((u, k) => {
-        const p = pts[Math.round(u * 80)];
-        add('tprof', k, sd * I.sx + p.x * c + p.z * s + sd * off, I.y + p.y + state.templeProf[k], 0xc084fc, I.z - p.x * s + p.z * c, sd);
-      });
-      TCURVE_U.forEach((u, k) => {
-        const p = pts[Math.round(u * 80)];
-        add('tcurve', k, sd * I.sx + p.x * c + p.z * s + sd * off, I.y + p.y - tempH(u, I.T) - 0.05, 0x2dd4bf, I.z - p.x * s + p.z * c, sd);
-      });
+      const at = (p, dy) => [sd * I.sx + p.x * c + p.z * s + sd * off, I.y + p.y + dy, I.z - p.x * s + p.z * c];
+      tu.forEach((u, k) => { const [x, y, z] = at(pts[Math.round(u * 80)], state.templeProf[k]); add('tprof', k, x, y, 0xc084fc, z, sd); });
+      if (Dd > 0) { const kb = Math.max(0, pts.findIndex(p => p.z <= -I.L * bz)), [x, y, z] = at(pts[kb], 0); add('tbend', 0, x, y, 0xfacc15, z, sd); }
+      const [x, y, z] = at(pts[80], 0); add('tdrop', 0, x, y, 0x34d399, z, sd);
     });
   } else {
-    if (!shield) {
-      add('corner', 0, cx + a, -b, 0x4fc3f7);
-      add('topcorner', 0, cx + a, b, 0x38bdf8);
-      add('inner', 0, cx - a, 0, 0x0ea5e9);
-      add('bridge', 0, bw / 2, h * 0.2 + state.bridgeY * h, 0x81c784);
-    }
-    const I = templeInfo(), pMid = I.line(1)[40], c = Math.cos(I.th), s = Math.sin(I.th);
-    add('splay', 0, I.sx + pMid.x * c - pMid.z * s, I.y + pMid.y, 0xfbbf24, I.z + pMid.x * s + pMid.z * c);
-    const t = tipPos();
-    add('temple', 0, t.x, t.y, 0xffa726, t.z);
+    if (!shield) { add('corner', 0, cx + a, -b, 0x4fc3f7); add('bridge', 0, bw / 2, h * 0.2 + state.bridgeY * h, 0x81c784); }
+    const t = tipPos(); add('temple', 0, t.x, t.y, 0xffa726, t.z);
   }
 }
 
+// Vista laterale centrata sull'asta (utile per modellarne il profilo)
 function focusTemple() {
   const I = templeInfo();
   eyewearGroup.rotation.y = 0; state.autoRotate = false;
@@ -1459,8 +1409,7 @@ function focusTemple() {
 }
 
 function setModelMode(m) {
-  if (m && arActive) toggleARMode(false);
-  dragH = null; hoveredH = null; if (typeof controls !== 'undefined') controls.enabled = true;
+  dragH = null; if (typeof controls !== 'undefined') controls.enabled = true;
   if (m && state.construction === 'shield' && (m === 'pts' || m === 'thick')) { m = 'size'; showToast('Il visore si modella da Misure e Aste'); }
   modelMode = m;
   if (m) {
@@ -1469,14 +1418,18 @@ function setModelMode(m) {
     state.autoRotate = false; document.getElementById('btn-autorotate').classList.remove('bg-brand-gold', 'text-black');
     if (m === 'asta') focusTemple(); else setCameraPreset(m === 'size' ? 'threequarter' : 'front');
   }
-  document.querySelectorAll('#model-bar [data-m]').forEach(b => { b.classList.toggle('hidden', !m && b.dataset.m !== 'toggle'); b.classList.toggle('bg-brand-gold', b.dataset.m === m); b.classList.toggle('text-black', b.dataset.m === m); });
+  document.querySelectorAll('#model-bar [data-m]').forEach(b => {
+    const k = b.dataset.m, always = k === 'toggle' || k === 'tryon', f = b.dataset.for;
+    b.classList.toggle('hidden', !always && (!m || (f && !f.split(' ').includes(m))));
+    b.classList.toggle('bg-brand-gold', k === m); b.classList.toggle('text-black', k === m);
+  });
   document.getElementById('model-hint').textContent = m ? MODE_INFO[m][1] : '';
   document.getElementById('model-hint').classList.toggle('hidden', !m);
   buildEyewear3D();
 }
 
 function resetModel() {
-  state.customPts = state.customW = null; state.shape = 'wayfarer'; state.bridgeY = 0; state.templeProf = null; state.templeCurve = null;
+  state.customPts = state.customW = null; state.shape = 'wayfarer'; state.bridgeY = 0; state.templeProf = null; state.templeBend = state.templeDrop = null; state.bridgeLift = 100;
   if (modelMode === 'pts' || modelMode === 'thick') { ensureCustom(); state.shape = 'custom'; }
   if (modelMode === 'asta') ensureTempleProf();
   buildEyewear3D(); showToast('Forma ripristinata');
@@ -1488,17 +1441,26 @@ function initModeler() {
   const btn = 'px-2.5 py-1 text-xs rounded-lg bg-slate-800/90 text-slate-200 hover:bg-brand-gold hover:text-black transition whitespace-nowrap';
   bar.innerHTML = `<div id="model-bar" class="flex flex-wrap justify-center items-center gap-1.5 bg-slate-900/80 backdrop-blur-md p-1.5 rounded-xl border border-slate-700/60 shadow-xl">
       <button data-m="toggle" class="${btn}"><i class="fa-solid fa-pen-ruler mr-1"></i>Modella</button>
+      <button data-m="tryon" class="${btn}"><i class="fa-solid fa-camera mr-1"></i>Prova</button>
       ${Object.entries(MODE_INFO).map(([k, v]) => `<button data-m="${k}" class="${btn} hidden">${v[0]}</button>`).join('')}
+      <button data-m="p+" data-for="pts thick" class="${btn} hidden" title="Aggiungi un punto dopo quello selezionato">＋ punto</button>
+      <button data-m="p-" data-for="pts thick" class="${btn} hidden" title="Elimina il punto selezionato">− punto</button>
+      <button data-m="p2" data-for="pts thick" class="${btn} hidden" title="Raddoppia i punti">×2</button>
+      <button data-m="t+" data-for="asta" class="${btn} hidden" title="Più punti sul profilo dell’asta">＋ profilo</button>
+      <button data-m="t-" data-for="asta" class="${btn} hidden" title="Meno punti sul profilo dell’asta">− profilo</button>
       <button data-m="reset" class="${btn} hidden" title="Ripristina forma">↺</button>
       <span data-m="sep" class="hidden w-px h-4 bg-slate-600 mx-0.5"></span>
       ${[['front', 'Fronte'], ['side', 'Lato'], ['top', 'Alto'], ['3q', '3/4']].map(([k, n]) => `<button data-m="v:${k}" class="${btn} hidden">${n}</button>`).join('')}</div>
-    <div id="model-hint" class="hidden text-[11px] text-brand-gold bg-slate-900/85 px-2.5 py-0.5 rounded-md border border-brand-gold/30"></div>`;
+    <div id="model-hint" class="hidden text-[11px] text-brand-gold bg-slate-900/80 px-2 py-0.5 rounded-md"></div>`;
   c.appendChild(bar);
   bar.querySelectorAll('[data-m]').forEach(b => b.onclick = () => {
     const m = b.dataset.m;
     if (m === 'toggle') setModelMode(modelMode ? null : 'pts');
     else if (m === 'reset') resetModel();
     else if (m === 'sep') return;
+    else if (m === 'tryon') toggleTryOn();
+    else if (m === 'p+') addPoint(); else if (m === 'p-') delPoint(); else if (m === 'p2') doublePoints();
+    else if (m === 't+') resampleProf(1); else if (m === 't-') resampleProf(-1);
     else if (m.startsWith('v:')) {
       const v = m.slice(2);
       if (v === 'side' && (modelMode === 'asta' || modelMode === 'size')) focusTemple();
@@ -1515,32 +1477,17 @@ function initModeler() {
     if (!modelMode || !handleGroup) return;
     ray(e); const hit = rc.intersectObjects(handleGroup.children)[0];
     if (!hit) return;
-    dragH = hit.object.userData.handle; controls.enabled = false; e.stopImmediatePropagation();
+    dragH = hit.object.userData.handle; controls.enabled = false;
+    if (dragH.kind === 'pts' || dragH.kind === 'thick') selPt = dragH.i; e.stopImmediatePropagation();
     try { cv.setPointerCapture(e.pointerId); } catch (_) {}
   }, true);
 
   cv.addEventListener('pointermove', e => {
-    if (!dragH) {
-      if (modelMode && handleGroup && handleGroup.children.length) {
-        ray(e);
-        const hit = rc.intersectObjects(handleGroup.children)[0];
-        const next = hit ? hit.object.userData.handle : null;
-        const changed = (!!next !== !!hoveredH) || (next && hoveredH && (next.kind !== hoveredH.kind || next.i !== hoveredH.i || next.s !== hoveredH.s));
-        if (changed) {
-          hoveredH = next;
-          cv.style.cursor = next ? 'grab' : '';
-          buildHandles();
-        }
-      }
-      return;
-    }
+    if (!dragH) return;
     const hp = handleGroup.children.find(m => m.userData.handle.kind === dragH.kind && m.userData.handle.i === dragH.i && m.userData.handle.s === dragH.s);
     if (!hp) return;
     ray(e);
-    const kd = dragH.kind;
-    const pl = (kd === 'temple' || kd === 'splay') ? new THREE.Plane(V3(0, 1, 0), -hp.position.y)
-             : (kd === 'tprof' || kd === 'tcurve') ? new THREE.Plane(V3(1, 0, 0), -hp.position.x)
-             : new THREE.Plane(V3(0, 0, 1), -hp.position.z);
+    const kd = dragH.kind, pl = kd === 'temple' ? new THREE.Plane(V3(0, 1, 0), -hp.position.y) : (kd === 'tprof' || kd === 'tbend' || kd === 'tdrop') ? new THREE.Plane(V3(1, 0, 0), -hp.position.x) : new THREE.Plane(V3(0, 0, 1), -hp.position.z);
     if (!rc.ray.intersectPlane(pl, pt)) return;
     const w = state.lensWidth / 10, h = state.lensHeight / 10, bw = state.bridgeWidth / 10, a = w / 2, b = h / 2, cx = w / 2 + bw / 2, rt = state.thickness / 10, k = dragH.kind;
     if (k === 'pts') state.customPts[dragH.i] = [clamp((pt.x - cx) / a, -1.5, 1.5), clamp(pt.y / b, -1.5, 1.5)];
@@ -1549,375 +1496,227 @@ function initModeler() {
       state.customW[dragH.i] = clamp(Math.hypot(pt.x - (cx + p[0] * a), pt.y - p[1] * b) / (rt * 0.9), 0.35, 2.8);
     }
     else if (k === 'corner') { state.lensWidth = clamp(Math.round((pt.x - bw / 2) * 10), 44, 60); state.lensHeight = clamp(Math.round(-pt.y * 20), 32, 52); }
-    else if (k === 'topcorner') { state.lensWidth = clamp(Math.round((pt.x - bw / 2) * 10), 44, 60); state.lensHeight = clamp(Math.round(pt.y * 20), 32, 52); }
-    else if (k === 'inner') { state.lensWidth = clamp(Math.round((bw / 2 + w - pt.x) * 10), 44, 60); }
     else if (k === 'bridge') { state.bridgeWidth = clamp(Math.round(pt.x * 20), 14, 24); state.bridgeY = clamp((pt.y - h * 0.2) / h, -0.12, 0.25); }
-    else if (k === 'splay') {
-      const I = templeInfo(), dx = pt.x - I.sx, dz = I.z - pt.z;
-      state.templeSplay = clamp(Math.round(Math.atan2(dx, dz) * 180 / Math.PI), 0, 12);
-    }
     else if (k === 'temple') {
       const I = templeInfo(), dx = (pt.x + 0.4) - I.sx, dz = I.z - pt.z;
       state.templeLength = clamp(Math.round(Math.hypot(dx, dz) * 10 / 5) * 5, 120, 150);
       state.templeSplay = clamp(Math.round(Math.atan2(dx, dz) * 180 / Math.PI), 0, 12);
     }
     else if (k === 'tprof') {
-      const I = templeInfo(), p = I.line(1)[Math.round(TU[dragH.i] * 80)];
+      const I = templeInfo(), p = I.line(1)[Math.round(tuOf(state.templeProf.length)[dragH.i] * 80)];
       state.templeProf[dragH.i] = clamp(pt.y - (I.y + p.y), 0.04, 0.8);
     }
-    else if (k === 'tcurve') {
-      const I = templeInfo();
-      state.templeCurve[dragH.i] = clamp(pt.y - I.y, -3.6, 1.2);
-    }
+    else if (k === 'tbend') { const I = templeInfo(); state.templeBend = clamp(-(pt.z - I.z) / I.L, 0.5, 0.93); }
+    else if (k === 'tdrop') { const I = templeInfo(); state.templeDrop = clamp(I.y - pt.y, 0, 4); }
     later();
   });
-  const end = () => { dragH = null; if (!arActive) controls.enabled = true; };
+  const end = () => { dragH = null; controls.enabled = true; };
   cv.addEventListener('pointerup', end); cv.addEventListener('pointercancel', end); cv.addEventListener('lostpointercapture', end);
   window.addEventListener('pointerup', end); window.addEventListener('pointercancel', end);
 }
 
-// =========================================================================
-// VIRTUAL TRY-ON WEBCAM (MediaPipe FaceLandmarker + Posizionamento 3D Automatico)
-// =========================================================================
-let arActive = false, arStream = null, arLandmarker = null, arLegacyMesh = null;
-let arFacingMode = 'user', arShowLandmarks = false, arLastVideoTime = -1, arFaceLocked = false;
-const arOffsets = { scale: 1.0, y: 0.0, z: 0.0 };
-const arSmooth = { pos: new THREE.Vector3(0, 0, 0), quat: new THREE.Quaternion(), scale: 1, initialized: false };
-
-function setARStatus(stateType, text) {
-  const dot = document.getElementById('ar-status-dot');
-  const lbl = document.getElementById('ar-status-text');
-  if (!dot || !lbl) return;
-  lbl.textContent = text;
-  dot.className = 'w-2.5 h-2.5 rounded-full ' + (
-    stateType === 'ok' ? 'bg-emerald-400' :
-    stateType === 'warn' ? 'bg-amber-400 animate-pulse' : 'bg-rose-500'
-  );
+// ---- Più punti di controllo: la nuova posizione è presa dalla curva, quindi la forma non cambia ----------------
+const curveOf = q => new THREE.CatmullRomCurve3(q.map(p => V3(p[0], p[1], 0)), true, 'centripetal');
+function addPoint() {
+  ensureCustom();
+  const q = state.customPts, W = state.customW, n = q.length;
+  if (n >= 48) return showToast('Massimo 48 punti');
+  const i = selPt % n, p = curveOf(q).getPoint((i + 0.5) / n);
+  q.splice(i + 1, 0, [p.x, p.y]); W.splice(i + 1, 0, (W[i] + W[(i + 1) % n]) / 2); selPt = i + 1;
+  buildEyewear3D();
+}
+function delPoint() {
+  const q = state.customPts, W = state.customW;
+  if (!q || q.length <= 6) return showToast('Servono almeno 6 punti');
+  const i = selPt % q.length; q.splice(i, 1); W.splice(i, 1); selPt = Math.max(0, i - 1);
+  buildEyewear3D();
+}
+function doublePoints() {
+  ensureCustom();
+  const q = state.customPts, W = state.customW, n = q.length;
+  if (n * 2 > 48) return showToast('Massimo 48 punti');
+  const c = curveOf(q), nq = [], nw = [];
+  q.forEach((p, i) => { const m = c.getPoint((i + 0.5) / n); nq.push(p, [m.x, m.y]); nw.push(W[i], (W[i] + W[(i + 1) % n]) / 2); });
+  state.customPts = nq; state.customW = nw; selPt = (selPt * 2) % nq.length;
+  buildEyewear3D();
+}
+// Profilo dell'asta con più (o meno) punti, mantenendo la forma attuale
+function resampleProf(dir) {
+  ensureTempleProf();
+  const T = TEMPLES[state.templeStyle] || TEMPLES.curved, n = state.templeProf.length + dir;
+  if (n < 3 || n > 11) return showToast(n < 3 ? 'Servono almeno 3 punti' : 'Massimo 11 punti');
+  state.templeProf = tuOf(n).map(u => tempH(u, T));
+  buildEyewear3D();
 }
 
-function toggleARLandmarks() {
-  arShowLandmarks = !arShowLandmarks;
-  const b = document.getElementById('btn-ar-landmarks');
-  if (b) {
-    b.classList.toggle('bg-emerald-500/25', arShowLandmarks);
-    b.classList.toggle('border-emerald-400', arShowLandmarks);
-    b.classList.toggle('text-emerald-200', arShowLandmarks);
+</script>
+  <script>
+// =========================================================================
+// PROVA CON WEBCAM: tracking del volto (MediaPipe Face Landmarker) + posa 3D
+// 1 unità del modello = 1 cm: la montatura viene posta a misura reale sul volto.
+// =========================================================================
+const TRY = { active: false, busy: false, fov: 50, mirror: true, lost: 0, last: -1, have: false, pos: new THREE.Vector3(), quat: new THREE.Quaternion(), landmarker: null };
+const MP_VER = '0.10.14', MP_BASE = `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${MP_VER}`;
+Object.assign(state, { tryIPD: 63, tryY: 0, tryZ: 15, tryTilt: 6 });
+
+function activeCamera() { return TRY.active ? TRY.cam : camera; }
+
+// ---- Calcolo della posa dai landmark (funzione pura, testabile) ---------------------------------------------
+// L: 478 landmark normalizzati; mat: matrice 4x4 di MediaPipe (o null); misure in px del canvas e del video.
+function headPose(L, mat, cw, ch, vw, vh, fovDeg, ipdCm) {
+  const sc = Math.max(cw / vw, ch / vh), dw = vw * sc, dh = vh * sc, ox = (cw - dw) / 2, oy = (ch - dh) / 2;
+  const f = (ch / 2) / Math.tan(fovDeg * Math.PI / 360), iR = 468, iL = 473;
+  const px = i => ox + L[i].x * dw, py = i => oy + L[i].y * dh;
+  const ipdPx = Math.hypot(px(iL) - px(iR), py(iL) - py(iR), (L[iL].z - L[iR].z) * dw) || 1;   // distanza 3D: indipendente dalla rotazione
+  const cmPx = ipdCm / ipdPx, d0 = f * cmPx, zRef = (L[iL].z + L[iR].z) / 2;
+  const P = i => { const d = d0 + (L[i].z - zRef) * dw * cmPx; return new THREE.Vector3((px(i) - cw / 2) / f * d, -(py(i) - ch / 2) / f * d, -d); };
+  const a = P(iR), b = P(iL), mid = a.clone().add(b).multiplyScalar(0.5), faceW = P(234).distanceTo(P(454));
+  let xA = null, yA = null, zA = null;
+  if (mat && mat.length === 16) {   // la matrice può essere per colonne o per righe: la riconosco dalla riga finale
+    const m = (Math.abs(mat[15] - 1) < 1e-3 && Math.abs(mat[3]) < 1e-3) ? mat : [0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15].map(k => mat[k]);
+    const x = new THREE.Vector3(m[0], m[1], m[2]).normalize(), y = new THREE.Vector3(m[4], m[5], m[6]).normalize(), z = new THREE.Vector3(m[8], m[9], m[10]).normalize();
+    if (x.x > 0 && z.z > 0) { xA = x; yA = y; zA = z; }   // convenzione attesa: x a destra, z verso la camera
   }
+  if (!xA) {   // alternativa: assi dai landmark (occhi + mento/fronte)
+    xA = b.clone().sub(a).normalize();
+    const up = P(10).sub(P(152)).normalize();
+    zA = new THREE.Vector3().crossVectors(xA, up).normalize(); yA = new THREE.Vector3().crossVectors(zA, xA);
+  }
+  return { mid, x: xA, y: yA, z: zA, faceW, depth: d0 };
 }
 
-function updateAROffset(key, val) {
-  const v = parseFloat(val);
-  arOffsets[key] = v;
-  if (key === 'scale') document.getElementById('ar-val-scale').textContent = v.toFixed(2) + 'x';
-  if (key === 'y') document.getElementById('ar-val-y').textContent = v.toFixed(2);
-  if (key === 'z') document.getElementById('ar-val-z').textContent = v.toFixed(2);
-}
+// ---- Avvio / arresto -----------------------------------------------------------------------------------------
+async function toggleTryOn() { return TRY.active ? stopTryOn() : startTryOn(); }
 
-function resetAROffsets() {
-  arOffsets.scale = 1.0; arOffsets.y = 0.0; arOffsets.z = 0.0;
-  document.getElementById('ar-off-scale').value = 1;
-  document.getElementById('ar-off-y').value = 0;
-  document.getElementById('ar-off-z').value = 0;
-  updateAROffset('scale', 1); updateAROffset('y', 0); updateAROffset('z', 0);
-}
-
-async function initFaceTrackerEngine() {
-  if (arLandmarker || arLegacyMesh) return true;
-  setARStatus('warn', 'Caricamento AI rilevamento volto...');
+async function startTryOn() {
+  if (TRY.active || TRY.busy) return;
+  TRY.busy = true;
   try {
-    const vision = await import('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/vision_bundle.mjs');
-    const fileset = await vision.FilesetResolver.forVisionTasks(
-      'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm'
-    );
-    const modelUrl = 'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task';
-    try {
-      arLandmarker = await vision.FaceLandmarker.createFromOptions(fileset, {
-        baseOptions: { modelAssetPath: modelUrl, delegate: 'GPU' },
-        runningMode: 'VIDEO',
-        numFaces: 1,
-        minFaceDetectionConfidence: 0.45,
-        minFacePresenceConfidence: 0.45,
-        minTrackingConfidence: 0.45
-      });
-    } catch (_) {
-      arLandmarker = await vision.FaceLandmarker.createFromOptions(fileset, {
-        baseOptions: { modelAssetPath: modelUrl, delegate: 'CPU' },
-        runningMode: 'VIDEO',
-        numFaces: 1,
-        minFaceDetectionConfidence: 0.45,
-        minFacePresenceConfidence: 0.45,
-        minTrackingConfidence: 0.45
-      });
+    if (typeof modelMode !== 'undefined' && modelMode) setModelMode(null);
+    showToast('Avvio fotocamera…');
+    TRY.stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false });
+    const v = TRY.video = document.createElement('video');
+    v.playsInline = true; v.muted = true; v.srcObject = TRY.stream; await v.play();
+    if (!TRY.landmarker) {
+      showToast('Carico il tracking del volto…');
+      const mp = await import(`${MP_BASE}/vision_bundle.mjs`), fs = await mp.FilesetResolver.forVisionTasks(`${MP_BASE}/wasm`);
+      const opts = delegate => ({ baseOptions: { modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task', delegate }, runningMode: 'VIDEO', numFaces: 1, outputFacialTransformationMatrixes: true });
+      try { TRY.landmarker = await mp.FaceLandmarker.createFromOptions(fs, opts('GPU')); } catch (e) { TRY.landmarker = await mp.FaceLandmarker.createFromOptions(fs, opts('CPU')); }
     }
-    return true;
-  } catch (err) {
-    console.warn('Tasks Vision fallback:', err);
-    setARStatus('err', 'Errore caricamento AI (verifica connessione Internet)');
-    return false;
+    enterTryScene();
+    TRY.active = true;
+    showToast('Inquadra il viso: la montatura si posiziona da sola');
+  } catch (e) {
+    console.error(e);
+    const denied = e && (e.name === 'NotAllowedError' || e.name === 'NotFoundError' || e.name === 'SecurityError');
+    stopTryOn(true);
+    showToast(denied ? 'Fotocamera non disponibile: consenti l’accesso o apri il file nel browser' : 'Tracking non caricato: serve la connessione internet');
+  } finally { TRY.busy = false; }
+}
+
+function enterTryScene() {
+  const c = renderer.domElement;
+  TRY.cam = new THREE.PerspectiveCamera(TRY.fov, (c.clientWidth || 1) / (c.clientHeight || 1), 0.5, 400);
+  const vt = TRY.vt = new THREE.VideoTexture(TRY.video);
+  vt.encoding = THREE.sRGBEncoding; vt.minFilter = vt.magFilter = THREE.LinearFilter;
+  TRY.plane = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: vt, depthTest: false, depthWrite: false, toneMapped: false }));
+  TRY.plane.position.z = -300; TRY.plane.renderOrder = -10; TRY.plane.frustumCulled = false; scene.add(TRY.plane);
+  // testa invisibile che scrive solo la profondità: nasconde le aste dietro il viso
+  TRY.head = new THREE.Group();
+  const occ = new THREE.Mesh(new THREE.SphereGeometry(1, 32, 24), new THREE.MeshBasicMaterial({ colorWrite: false }));
+  occ.renderOrder = -5; TRY.head.add(occ); TRY.occ = occ; TRY.head.visible = false; scene.add(TRY.head);
+  TRY.bg = scene.background; scene.background = null;
+  TRY.ground = scene.children.find(o => o.material && o.material.type === 'ShadowMaterial'); if (TRY.ground) TRY.ground.visible = false;
+  state.autoRotate = false; document.getElementById('btn-autorotate').classList.remove('bg-brand-gold', 'text-black');
+  eyewearGroup.rotation.set(0, 0, 0); eyewearGroup.visible = false; TRY.have = false; TRY.lost = 99;
+  controls.enabled = false; c.style.transform = TRY.mirror ? 'scaleX(-1)' : '';
+  const bar = document.getElementById('model-bar-wrap'); if (bar) bar.style.display = 'none';
+  buildTryPanel();
+}
+
+function stopTryOn(silent) {
+  if (TRY.stream) TRY.stream.getTracks().forEach(t => t.stop());
+  TRY.stream = null;
+  if (TRY.active || TRY.plane) {
+    if (TRY.plane) { scene.remove(TRY.plane); TRY.plane.geometry.dispose(); TRY.plane.material.dispose(); TRY.vt.dispose(); TRY.plane = null; }
+    if (TRY.head) { scene.remove(TRY.head); TRY.head = null; }
+    if (TRY.ground) TRY.ground.visible = true;
+    eyewearGroup.visible = true; eyewearGroup.position.set(0, 0, 0); eyewearGroup.quaternion.identity();
+    controls.enabled = true; renderer.domElement.style.transform = '';
+    if (typeof setStudioEnv === 'function') setStudioEnv(state.env);
   }
+  TRY.active = false;
+  const bar = document.getElementById('model-bar-wrap'); if (bar) bar.style.display = '';
+  if (TRY.panel) { TRY.panel.remove(); TRY.panel = null; }
+  if (!silent) showToast('Prova chiusa');
 }
 
-function normToScreenUV(lm, vw, vh, cw, ch, isMirrored) {
-  const va = vw / vh, ca = cw / ch;
-  let u = lm.x, v = lm.y;
-  if (va > ca) u = 0.5 + (u - 0.5) * (va / ca);
-  else v = 0.5 + (v - 0.5) * (ca / va);
-  if (isMirrored) u = 1 - u;
-  return { u, v };
+// ---- Pannello comandi ---------------------------------------------------------------------------------------
+function buildTryPanel() {
+  const p = TRY.panel = document.createElement('div');
+  p.className = 'absolute top-16 left-1/2 -translate-x-1/2 z-20 w-[min(92%,340px)] bg-slate-900/85 backdrop-blur-md p-3 rounded-xl border border-slate-700/60 shadow-xl space-y-2';
+  const sl = (k, l, min, max, u) => `<div><div class="flex justify-between text-[11px] text-slate-400"><span>${l}</span><span class="font-mono text-brand-gold" data-tv="${k}"></span></div><input type="range" class="w-full" data-tk="${k}" min="${min}" max="${max}" step="1" value="${state[k]}"></div>`;
+  p.innerHTML = `<div class="flex items-center justify-between gap-2">
+      <span class="text-xs font-bold text-brand-gold"><i class="fa-solid fa-camera mr-1"></i>Prova con webcam</span>
+      <div class="flex gap-1">
+        <button data-a="mirror" class="px-2 py-1 text-[11px] rounded-lg bg-slate-800 hover:bg-slate-700">Specchio</button>
+        <button data-a="photo" class="px-2 py-1 text-[11px] rounded-lg bg-slate-800 hover:bg-slate-700"><i class="fa-solid fa-image"></i> Foto</button>
+        <button data-a="close" class="px-2 py-1 text-[11px] rounded-lg bg-brand-gold text-black font-bold">✕</button></div></div>
+    <div id="try-status" class="text-[11px] text-slate-300">Cerco il viso…</div>
+    ${sl('tryIPD', 'Distanza pupillare (scala sul viso)', 54, 74, 'mm')}${sl('tryY', 'Altezza sul naso', -10, 10, 'mm')}${sl('tryZ', 'Distanza dagli occhi', 0, 30, 'mm')}${sl('tryTilt', 'Inclinazione', 0, 15, '°')}`;
+  document.getElementById('viewport-container').appendChild(p);
+  const upd = () => p.querySelectorAll('[data-tv]').forEach(e => e.textContent = state[e.dataset.tv] + (e.dataset.tv === 'tryTilt' ? '°' : ' mm'));
+  p.querySelectorAll('[data-tk]').forEach(i => i.oninput = () => { state[i.dataset.tk] = parseFloat(i.value); upd(); });
+  upd();
+  p.querySelector('[data-a="close"]').onclick = () => stopTryOn();
+  p.querySelector('[data-a="photo"]').onclick = tryOnPhoto;
+  p.querySelector('[data-a="mirror"]').onclick = () => { TRY.mirror = !TRY.mirror; renderer.domElement.style.transform = TRY.mirror ? 'scaleX(-1)' : ''; };
 }
 
-function landmarkToWorld(lm, vw, vh, cw, ch, isMirrored) {
-  const { u, v } = normToScreenUV(lm, vw, vh, cw, ch, isMirrored);
-  const dist = camera.position.z;
-  const visH = 2 * dist * Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2);
-  const visW = visH * (cw / ch);
-  return new THREE.Vector3((u - 0.5) * visW, (0.5 - v) * visH, 0);
+function tryOnPhoto() {
+  renderer.render(scene, TRY.cam);
+  const src = renderer.domElement, cv = document.createElement('canvas');
+  cv.width = src.width; cv.height = src.height;
+  const x = cv.getContext('2d');
+  if (TRY.mirror) { x.translate(cv.width, 0); x.scale(-1, 1); }
+  x.drawImage(src, 0, 0);
+  const a = document.createElement('a'); a.download = `OJO_Prova_${Date.now()}.png`; a.href = cv.toDataURL('image/png'); a.click();
+  showToast('Foto salvata!');
 }
 
-function drawAROverlay(lm, vw, vh, cw, ch, isMirrored) {
-  const ov = document.getElementById('ar-overlay-canvas');
-  if (!ov) return;
-  if (ov.width !== cw || ov.height !== ch) { ov.width = cw; ov.height = ch; }
-  const ctx = ov.getContext('2d');
-  ctx.clearRect(0, 0, cw, ch);
-
-  if (!lm) {
-    // Guida ovale centrale mentre cerca il volto
-    const rx = Math.min(cw, ch) * 0.22;
-    const ry = rx * 1.32;
-    ctx.save();
-    ctx.strokeStyle = 'rgba(212, 175, 55, 0.75)';
-    ctx.lineWidth = 2.5;
-    ctx.setLineDash([10, 8]);
-    ctx.beginPath();
-    ctx.ellipse(cw / 2, ch * 0.46, rx, ry, 0, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.restore();
+// ---- Ciclo: chiamato a ogni frame da animate() ---------------------------------------------------------------
+function tryOnTick() {
+  if (!TRY.active) return;
+  const c = renderer.domElement, cw = c.clientWidth, ch = c.clientHeight, v = TRY.video;
+  if (!cw || !ch || v.readyState < 2 || !v.videoWidth) return;
+  if (Math.abs(TRY.cam.aspect - cw / ch) > 1e-3) { TRY.cam.aspect = cw / ch; TRY.cam.updateProjectionMatrix(); }
+  const visH = 2 * 300 * Math.tan(THREE.MathUtils.degToRad(TRY.fov) / 2), visW = visH * cw / ch, va = v.videoWidth / v.videoHeight;
+  let pw = visH * va, ph = visH;
+  if (pw < visW) { pw = visW; ph = visW / va; }
+  TRY.plane.scale.set(pw, ph, 1);
+  if (v.currentTime === TRY.last) return;
+  TRY.last = v.currentTime;
+  let r = null;
+  try { r = TRY.landmarker.detectForVideo(v, performance.now()); } catch (e) { return; }
+  const L = r && r.faceLandmarks && r.faceLandmarks[0], status = document.getElementById('try-status');
+  if (!L) {
+    if (++TRY.lost > 8) { eyewearGroup.visible = false; TRY.head.visible = false; TRY.have = false; if (status) status.textContent = 'Viso non rilevato: guarda la camera'; }
     return;
   }
-
-  if (!arShowLandmarks) return;
-
-  // Disegna i punti chiave tracciati sul viso (ponte, occhi, zigomi, tempie, contorno)
-  const keyGroups = [
-    { ids: [168, 6, 197, 195, 5, 4], color: '#34d399', r: 3.2 },
-    { ids: [33, 133, 159, 145, 263, 362, 386, 374], color: '#D4AF37', r: 2.8 },
-    { ids: [234, 454, 127, 356, 93, 323], color: '#38bdf8', r: 3.2 },
-    { ids: [10, 152, 21, 251, 58, 288, 172, 397], color: 'rgba(255,255,255,0.65)', r: 2.0 }
-  ];
-  keyGroups.forEach(g => {
-    ctx.fillStyle = g.color;
-    g.ids.forEach(idx => {
-      if (!lm[idx]) return;
-      const { u, v } = normToScreenUV(lm[idx], vw, vh, cw, ch, isMirrored);
-      ctx.beginPath();
-      ctx.arc(u * cw, v * ch, g.r, 0, Math.PI * 2);
-      ctx.fill();
-    });
-  });
-}
-
-function applyFaceLandmarksToEyewear(lm) {
-  const vid = document.getElementById('ar-video');
-  const container = document.getElementById('viewport-container');
-  const vw = vid.videoWidth, vh = vid.videoHeight;
-  const cw = container.clientWidth, ch = container.clientHeight;
-  const mirrored = arFacingMode === 'user';
-
-  drawAROverlay(lm, vw, vh, cw, ch, mirrored);
-
-  if (!lm) {
-    if (arFaceLocked) {
-      arFaceLocked = false;
-      eyewearGroup.visible = false;
-      setARStatus('warn', 'Inquadra il viso nella guida...');
-    }
-    return;
-  }
-
-  if (!arFaceLocked) {
-    arFaceLocked = true;
-    eyewearGroup.visible = true;
-    setARStatus('ok', 'Volto agganciato · Occhiale indossato');
-  }
-
-  // Punti anatomici: 168 sellion, 6 ponte nasale, 33/133 occhio sx, 263/362 occhio dx, 234/454 tempie
-  const pSellion = landmarkToWorld(lm[168], vw, vh, cw, ch, mirrored);
-  const pNoseMid = landmarkToWorld(lm[6], vw, vh, cw, ch, mirrored);
-  const pEyeLOut = landmarkToWorld(lm[33], vw, vh, cw, ch, mirrored);
-  const pEyeLIn  = landmarkToWorld(lm[133], vw, vh, cw, ch, mirrored);
-  const pEyeROut = landmarkToWorld(lm[263], vw, vh, cw, ch, mirrored);
-  const pEyeRIn  = landmarkToWorld(lm[362], vw, vh, cw, ch, mirrored);
-  const pTempleL = landmarkToWorld(lm[234], vw, vh, cw, ch, mirrored);
-  const pTempleR = landmarkToWorld(lm[454], vw, vh, cw, ch, mirrored);
-
-  // Centro ottico tra occhi e ponte nasale
-  const eyeCenterL = pEyeLOut.clone().add(pEyeLIn).multiplyScalar(0.5);
-  const eyeCenterR = pEyeROut.clone().add(pEyeRIn).multiplyScalar(0.5);
-  const eyesMid = eyeCenterL.clone().add(eyeCenterR).multiplyScalar(0.5);
-  const bridgeAnchor = eyesMid.clone().lerp(pNoseMid, 0.45).lerp(pSellion, 0.25);
-
-  // Calcolo orientamento 3D della testa (Yaw, Pitch, Roll)
-  const sgn = mirrored ? -1 : 1;
-  const mVec = idx => new THREE.Vector3(
-    sgn * (lm[idx].x - 0.5) * vw,
-    -(lm[idx].y - 0.5) * vh,
-    -lm[idx].z * vw
-  );
-  const vEyeL = mVec(33), vEyeR = mVec(263), vTop = mVec(10), vBot = mVec(152);
-  const xAxis = vEyeR.clone().sub(vEyeL).normalize();
-  const yRaw = vTop.clone().sub(vBot).normalize();
-  const zAxis = new THREE.Vector3().crossVectors(xAxis, yRaw).normalize();
-  const yAxis = new THREE.Vector3().crossVectors(zAxis, xAxis).normalize();
-  const basis = new THREE.Matrix4().makeBasis(xAxis, yAxis, zAxis);
-  const targetQuat = new THREE.Quaternion().setFromRotationMatrix(basis);
-
-  // Scala calibrata su distanza inter-oculare e larghezza tempie
-  const D = frameDims();
-  const referenceGlassesWidth = 12.2; // larghezza standard 52-18 in unità scena
-  const faceTempleSpan = pTempleR.distanceTo(pTempleL);
-  const outerEyeSpan = pEyeROut.distanceTo(pEyeLOut);
-  const blendedFaceWidth = Math.max(faceTempleSpan * 0.98, outerEyeSpan * 1.48);
-  const targetScale = (blendedFaceWidth / referenceGlassesWidth) * arOffsets.scale;
-
-  // Offset anatomico frontale (+Z davanti al ponte nasale)
-  const localOffset = new THREE.Vector3(0, -D.h * 0.06 + arOffsets.y, 0.32 + arOffsets.z).multiplyScalar(targetScale);
-  localOffset.applyQuaternion(targetQuat);
-  const targetPos = bridgeAnchor.clone().add(localOffset);
-
-  if (!arSmooth.initialized) {
-    arSmooth.pos.copy(targetPos);
-    arSmooth.quat.copy(targetQuat);
-    arSmooth.scale = targetScale;
-    arSmooth.initialized = true;
-  } else {
-    arSmooth.pos.lerp(targetPos, 0.5);
-    arSmooth.quat.slerp(targetQuat, 0.5);
-    arSmooth.scale += (targetScale - arSmooth.scale) * 0.5;
-  }
-
-  eyewearGroup.position.copy(arSmooth.pos);
-  eyewearGroup.quaternion.copy(arSmooth.quat);
-  eyewearGroup.scale.setScalar(arSmooth.scale);
-}
-
-function arProcessLoop() {
-  if (!arActive) return;
-  const vid = document.getElementById('ar-video');
-  if (arLandmarker && vid.readyState >= 2 && vid.videoWidth > 0 && vid.currentTime !== arLastVideoTime) {
-    arLastVideoTime = vid.currentTime;
-    try {
-      const res = arLandmarker.detectForVideo(vid, performance.now());
-      const lm = (res && res.faceLandmarks && res.faceLandmarks.length) ? res.faceLandmarks[0] : null;
-      applyFaceLandmarksToEyewear(lm);
-    } catch (e) {
-      console.warn('Frame tracking error:', e);
-    }
-  }
-  requestAnimationFrame(arProcessLoop);
-}
-
-async function toggleARMode(forceState) {
-  const next = typeof forceState === 'boolean' ? forceState : !arActive;
-  const vid = document.getElementById('ar-video');
-  const ov = document.getElementById('ar-overlay-canvas');
-  const hud = document.getElementById('ar-hud');
-  const hdrBtn = document.getElementById('btn-ar-header');
-  const studioBar = document.getElementById('studio-controls-bar');
-  const modelWrap = document.getElementById('model-bar-wrap');
-
-  if (next) {
-    if (modelMode) setModelMode(null);
-    arActive = true;
-    arFaceLocked = false;
-    arLastVideoTime = -1;
-    arSmooth.initialized = false;
-    state.autoRotate = false;
-    document.getElementById('btn-autorotate').classList.remove('bg-brand-gold', 'text-black');
-
-    vid.classList.remove('hidden');
-    vid.style.transform = arFacingMode === 'user' ? 'scaleX(-1)' : 'scaleX(1)';
-    ov.classList.remove('hidden');
-    hud.classList.remove('hidden');
-    studioBar.classList.add('hidden');
-    if (modelWrap) modelWrap.classList.add('hidden');
-
-    hdrBtn.classList.add('bg-emerald-500', 'text-black', 'border-emerald-400');
-    hdrBtn.classList.remove('bg-emerald-500/15', 'text-emerald-300');
-
-    scene.background = null;
-    renderer.setClearColor(0x000000, 0);
-    if (groundPlane) groundPlane.visible = false;
-
-    // Nasconde l'occhiale finché non aggancia il viso
-    eyewearGroup.visible = false;
-
-    controls.enabled = false;
-    camera.position.set(0, 0, 22);
-    controls.target.set(0, 0, 0);
-    camera.lookAt(0, 0, 0);
-
-    buildEyewear3D();
-    setARStatus('warn', 'Accesso alla videocamera...');
-
-    try {
-      if (arStream) arStream.getTracks().forEach(t => t.stop());
-      arStream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: arFacingMode, width: { ideal: 1280 }, height: { ideal: 720 } },
-        audio: false
-      });
-      vid.srcObject = arStream;
-      await vid.play();
-
-      try {
-        const devs = await navigator.mediaDevices.enumerateDevices();
-        const cams = devs.filter(d => d.kind === 'videoinput');
-        document.getElementById('btn-ar-flip').classList.toggle('hidden', cams.length < 2);
-      } catch (_) {}
-
-      const ok = await initFaceTrackerEngine();
-      if (ok) {
-        setARStatus('warn', 'Inquadra il viso nella guida...');
-        drawAROverlay(null, vid.videoWidth, vid.videoHeight, ov.clientWidth, ov.clientHeight, arFacingMode === 'user');
-        arProcessLoop();
-      }
-    } catch (err) {
-      setARStatus('err', 'Permesso videocamera negato o non disponibile');
-      showToast('Impossibile accedere alla videocamera');
-    }
-  } else {
-    arActive = false;
-    arFaceLocked = false;
-    if (arStream) { arStream.getTracks().forEach(t => t.stop()); arStream = null; }
-    vid.srcObject = null;
-    vid.classList.add('hidden');
-    ov.classList.add('hidden');
-    hud.classList.add('hidden');
-    studioBar.classList.remove('hidden');
-    if (modelWrap) modelWrap.classList.remove('hidden');
-
-    hdrBtn.classList.remove('bg-emerald-500', 'text-black', 'border-emerald-400');
-    hdrBtn.classList.add('bg-emerald-500/15', 'text-emerald-300');
-
-    if (groundPlane) groundPlane.visible = true;
-    setStudioEnv(state.env);
-
-    eyewearGroup.visible = true;
-    eyewearGroup.position.set(0, 0, 0);
-    eyewearGroup.quaternion.set(0, 0, 0, 1);
-    eyewearGroup.scale.set(1, 1, 1);
-
-    controls.enabled = true;
-    camera.position.set(0, 5, 22);
-    controls.target.set(0, 0, 0);
-    controls.update();
-    buildEyewear3D();
-  }
-}
-
-async function switchARCamera() {
-  arFacingMode = arFacingMode === 'user' ? 'environment' : 'user';
-  if (arActive) await toggleARMode(true);
+  TRY.lost = 0;
+  const M = r.facialTransformationMatrixes && r.facialTransformationMatrixes[0];
+  const P = headPose(L, M ? M.data : null, cw, ch, v.videoWidth, v.videoHeight, TRY.fov, state.tryIPD / 10);
+  const basis = new THREE.Matrix4().makeBasis(P.x, P.y, P.z), q = new THREE.Quaternion().setFromRotationMatrix(basis);
+  const off = new THREE.Vector3(0, state.tryY / 10, state.tryZ / 10).applyQuaternion(q);
+  const target = P.mid.clone().add(off);
+  q.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), THREE.MathUtils.degToRad(state.tryTilt)));   // inclinazione pantoscopica
+  if (TRY.have) { TRY.pos.lerp(target, 0.6); TRY.quat.slerp(q, 0.5); } else { TRY.pos.copy(target); TRY.quat.copy(q); TRY.have = true; }
+  eyewearGroup.position.copy(TRY.pos); eyewearGroup.quaternion.copy(TRY.quat); eyewearGroup.visible = true;
+  // testa-occlusore: ellissoide dietro il piano delle pupille, largo quanto il viso misurato
+  const hq = new THREE.Quaternion().setFromRotationMatrix(basis), rx = Math.max(6, P.faceW / 2 * 0.98);
+  TRY.head.position.copy(P.mid.clone().add(new THREE.Vector3(0, -1.2, -7.6).applyQuaternion(hq))); TRY.head.quaternion.copy(hq);
+  TRY.head.scale.set(rx, 10.5, 8.3); TRY.head.visible = true;
+  if (status) status.textContent = `Viso rilevato · distanza ≈ ${Math.round(P.depth)} cm · larghezza viso ≈ ${P.faceW.toFixed(1)} cm`;
 }
 
 </script>
