@@ -240,7 +240,7 @@ const C = hex => new THREE.Color(hex).convertSRGBToLinear();
       autoRotate: false,
       env: 'dark',
       bridgeMaterial: 'acetate_black', tipMaterial: 'acetate_black',
-      frameWrap: 10, bridgeY: 0, templeBend: null, templeDrop: null, bridgeLift: 100, edgeFront: 15, edgeBridge: 15, edgeTemple: 15, lower: 'same', lowerMaterial: 'metal_silver', lowerCut: -16, lowerThick: 1, strap: 'none', strapMaterial: 'rubber_black', strapWidth: 25, frameDepth: 100, templeW: 100, templeProf: null, customPts: null, customW: null, templeLength: 145, templeSplay: 0, activePart: 'front'
+      frameWrap: 10, bridgeY: 0, hingeType: 'barrel', hingeMaterial: 'metal_silver', hingeSize: 100, templeFold: 0, templeBend: null, templeDrop: null, bridgeLift: 100, edgeFront: 15, edgeBridge: 15, edgeTemple: 15, lower: 'same', lowerMaterial: 'metal_silver', lowerCut: -16, lowerThick: 1, strap: 'none', strapMaterial: 'rubber_black', strapWidth: 25, frameDepth: 100, templeW: 100, templeProf: null, customPts: null, customW: null, templeLength: 145, templeSplay: 0, activePart: 'front'
     };
 
     // Material definitions for 3D PBR
@@ -561,9 +561,10 @@ const SHAPE_PTS = {
   boston:   [[.98,.3],[.82,.82],[.25,.98],[-.4,.95],[-.9,.8],[-1,.3],[-.92,-.35],[-.6,-.85],[0,-1],[.55,-.9],[.9,-.55],[1.02,-.1]]
 };
 
+const validPts = q => !!q && q.length >= 6 && q.every(p => p && isFinite(p[0]) && isFinite(p[1]));
 function lensPoints(type, w, h, count = 140) {
   let pts;
-  const q = type === 'custom' ? (state.customPts || SHAPE_PTS.wayfarer) : SHAPE_PTS[type];
+  const q = type === 'custom' ? (validPts(state.customPts) ? state.customPts : SHAPE_PTS.wayfarer) : SHAPE_PTS[type];
   if (q) {
     const a = w / 2, b = h / 2;
     const cv = new THREE.CatmullRomCurve3(q.map(([x, y]) => V3(x * a, y * b, 0)), true, 'centripetal');
@@ -858,8 +859,37 @@ function templeInfo() {
   return { D, T, L, sx, y, z: -D.depth * 0.9 - D.K * sx * sx, th: state.templeSplay * Math.PI / 180, line: s => templeLine(T, L, s) };
 }
 
+// Cerniere asta–montatura: tipo, materiale e dimensione regolabili
+function buildHinge(s, x, y, z, ew) {
+  const t = state.hingeType, k = state.hingeSize / 100;
+  if (t === 'hidden') return;                                   // cerniera nascosta: giunzione continua
+  const mat = getMaterialObject(state.hingeMaterial), outer = x + s * (ew + 0.025);
+  const add = (g, px, py, pz) => { const m = addMesh(g, mat, 'hinge', false); m.position.set(px, py, pz); return m; };
+  const cyl = (r, h) => new THREE.CylinderGeometry(r * k, r * k, h * k, 14);
+  if (t === 'barrel') {                                         // classica a 3 snodi con perno
+    [-0.17, 0, 0.17].forEach(dy => add(cyl(0.085, 0.15), x, y + dy * k, z));
+    add(cyl(0.04, 0.54), x, y, z);
+  } else if (t === 'spring') {                                  // flex: blocco + molla a vista
+    add(new THREE.BoxGeometry(0.2 * k, 0.34 * k, 0.16 * k), x, y, z + 0.02 * k);
+    const pts = [...Array(61).keys()].map(i => { const a = i / 60 * Math.PI * 12; return V3(0.095 * k * Math.cos(a), (i / 60 - 0.5) * 0.46 * k, 0.095 * k * Math.sin(a)); });
+    add(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 160, 0.017 * k, 6), x, y, z - 0.15 * k);
+  } else if (t === 'screw') {                                   // vite a vista sulla faccia esterna
+    add(cyl(0.08, 0.34), x, y, z);
+    const head = new THREE.CylinderGeometry(0.1 * k, 0.1 * k, 0.03, 20); head.rotateZ(Math.PI / 2); add(head, outer, y, z);
+    const slot = addMesh(new THREE.BoxGeometry(0.02, 0.17 * k, 0.025 * k), new THREE.MeshStandardMaterial({ color: C(0x1a1a1a), roughness: 0.5 }), 'hinge', false);
+    slot.position.set(outer + s * 0.02, y, z); slot.rotation.x = 0.6;
+  } else if (t === 'rivets') {                                  // piastra con 3 rivetti
+    add(cyl(0.065, 0.3), x, y, z);
+    add(new THREE.BoxGeometry(0.025, 0.2 * k, 0.6 * k), outer, y, z + 0.18 * k);
+    [0, 0.18, 0.36].forEach(dz => add(new THREE.SphereGeometry(0.04 * k, 10, 8), outer + s * 0.015, y, z + dz * k));
+  } else if (t === 'loop') {                                    // ad anello (montature in filo)
+    const ring = new THREE.TorusGeometry(0.1 * k, 0.022 * k, 8, 24); ring.rotateX(Math.PI / 2);
+    add(ring, x, y, z - 0.02 * k); add(cyl(0.03, 0.3), x, y, z + 0.1 * k);
+  }
+}
+
 function buildTemples3D(I, silver, frontMat) {
-  const { D, T, sx, y, z, th } = I, SEG = 80, cut = Math.round(SEG * 0.78), up = V3(0, 1, 0), wT = T.w * state.templeW / 100, K = D.K;
+  const { D, T, sx, y, z } = I, th = I.th, fold = state.templeFold * Math.PI / 180, SEG = 80, cut = Math.round(SEG * 0.78), up = V3(0, 1, 0), wT = T.w * state.templeW / 100, K = D.K;
   const mBody = getMaterialObject(state.templeMaterial), mTip = getMaterialObject(state.tipMaterial), tips = [];
   [-1, 1].forEach(s => {
     // terminale (endpiece): collega il bordo alla cerniera
@@ -877,17 +907,16 @@ function buildTemples3D(I, silver, frontMat) {
     const body = sweepGeo(sl(pts, 0, cut + 3), sl(A, 0, cut + 3), sl(B, 0, cut + 3), prof(0, 1), false, n);
     const tip = sweepGeo(sl(pts, cut), sl(A, cut), sl(B, cut), prof(cut, T.round ? 2.8 : 1.05), false, n);
     [[body, mBody, 'temples'], [tip, mTip, 'tips']].forEach(([g, mat, part]) => {
-      const m = addMesh(g, mat, part); m.position.set(s * sx, y, z); m.rotation.y = -s * th;
+      const m = addMesh(g, mat, part); m.position.set(s * sx, y, z); m.rotation.y = s * (fold - th);
       if (part === 'tips') { m.updateMatrix(); tips[s > 0 ? 1 : 0] = pts[SEG].clone().applyMatrix4(m.matrix); }
     });
-    const hinge = addMesh(new THREE.CylinderGeometry(0.09, 0.09, 0.4, 12), silver, null, false);
-    hinge.position.set(s * sx, y, z + 0.05);
+    buildHinge(s, s * sx, y, z + 0.05, ew);
   });
   if (state.engravingText.trim() && !T.round) {
     const em = new THREE.MeshBasicMaterial({ map: generateEngravingTexture(state.engravingText), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 });
     const eng = new THREE.Mesh(new THREE.PlaneGeometry(3.2, Math.min(0.4, tempH(0.28, T) * 1.2)), em);
     eng.position.set(-(wT + 0.02), -0.02, -3.6); eng.rotation.y = -Math.PI / 2; eng.renderOrder = 3;
-    const grp = new THREE.Group(); grp.position.set(-sx, y, z); grp.rotation.y = th; grp.add(eng); eyewearGroup.add(grp);
+    const grp = new THREE.Group(); grp.position.set(-sx, y, z); grp.rotation.y = th - fold; grp.add(eng); eyewearGroup.add(grp);
   }
   return tips;
 }
@@ -956,10 +985,10 @@ function getLensMaterial() {
 // =========================================================================
 // UI MODULARE: Montatura · Lenti · Ponte · Aste · Materiali · Dettagli
 // =========================================================================
-const PART_MAT = { front: 'frontMaterial', bridge: 'bridgeMaterial', temples: 'templeMaterial', tips: 'tipMaterial', strap: 'strapMaterial', lower: 'lowerMaterial' };
-const NOSYNC = ['strap', 'lower'];
+const PART_MAT = { front: 'frontMaterial', bridge: 'bridgeMaterial', temples: 'templeMaterial', tips: 'tipMaterial', strap: 'strapMaterial', lower: 'lowerMaterial', hinge: 'hingeMaterial' };
+const NOSYNC = ['strap', 'lower', 'hinge'];
 const SYNC_MAT = ['frontMaterial', 'bridgeMaterial', 'templeMaterial', 'tipMaterial'];
-const PART_NAME = { front: 'Montatura', bridge: 'Ponte', temples: 'Aste', tips: 'Puntali', strap: 'Fascia', lower: 'Sostegno' };
+const PART_NAME = { front: 'Montatura', bridge: 'Ponte', temples: 'Aste', tips: 'Puntali', strap: 'Fascia', lower: 'Sostegno', hinge: 'Cerniera' };
 const CAT = { acetate: 'Acetati', tortoise: 'Tartaruga', crystal: 'Cristalli', wood: 'Legno', bone: 'Osso', horn: 'Corno', metal: 'Metalli', carbon: 'Tecnici', rubber: 'Sport / Fascia' };
 
 const SHAPE_LIST = [
@@ -1125,6 +1154,8 @@ const TABS = [
   { id: 'temples', label: 'Aste', icon: 'fa-ruler', sections: [
     { t: 'Modello asta', el: () => optsGrid('templeStyle', TEMPLE_OPTS, 2) },
     { t: 'Misure', el: () => sliderBlock([['templeLength', 'Lunghezza asta', 120, 150, 5, 'mm'], ['templeSplay', 'Apertura (splay)', 0, 12, 1, '°'], ['templeW', 'Spessore asta', 50, 220, 5, '%'], ['edgeTemple', 'Spigolosità aste (0 tondo · 100 vivo)', 0, 100, 1, '%']]) },
+    { t: 'Cerniera asta–montatura', el: () => optsGrid('hingeType', [['barrel', 'Classica 3 snodi'], ['spring', 'Flex a molla'], ['screw', 'Vite a vista'], ['rivets', 'Piastra a rivetti'], ['loop', 'Ad anello'], ['hidden', 'Nascosta']], 2) },
+    { t: '', el: () => sliderBlock([['hingeSize', 'Dimensione cerniera', 60, 180, 5, '%'], ['templeFold', 'Anteprima aste chiuse', 0, 90, 1, '°']]) },
     { t: 'Fascia posteriore', el: () => optsGrid('strap', [['none', 'Nessuna'], ['cord', 'Cordino'], ['elastic', 'Elastica'], ['sport', 'Sport larga']], 4) },
     { t: '', el: () => sliderBlock([['strapWidth', 'Larghezza fascia', 8, 40, 1, 'mm']]) }
   ] },
@@ -1207,14 +1238,15 @@ function updatePrice() {
   p += { sun_solid: 0, vista: 10, mirror: 35, photochromic: 55, polar: 45, gradient: 20 }[state.lensType] + { none: 0, cord: 8, elastic: 12, sport: 25 }[state.strap];
   if (['metal_pads', 'wire', 'double'].includes(state.bridge)) p += 12;
   if (state.rivets !== 'none') p += 8;
+  p += { barrel: 0, spring: 12, screw: 6, rivets: 10, loop: 4, hidden: 8 }[state.hingeType] + (state.hingeType === 'hidden' ? 0 : mp(state.hingeMaterial) * 0.2);
   if (['wire', 'band'].includes(state.lower)) p += 8 + mp(state.lowerMaterial) * 0.3;
   if (state.engravingText.trim()) p += 10;
   document.getElementById('price').innerText = '€ ' + p.toFixed(2).replace('.', ',');
 }
 
 const CODE_KEYS = ['shape', 'construction', 'bridge', 'templeStyle', 'frontMaterial', 'bridgeMaterial', 'templeMaterial', 'tipMaterial', 'lensType', 'lensColor', 'rivets',
-  'lensWidth', 'lensHeight', 'bridgeWidth', 'thickness', 'templeLength', 'templeSplay', 'lensOpacity', 'frameWrap', 'bridgeY', 'strap', 'strapMaterial', 'strapWidth', 'frameDepth', 'templeW', 'lower', 'lowerMaterial', 'lowerCut', 'lowerThick', 'edgeFront', 'edgeBridge', 'edgeTemple', 'bridgeLift', 'syncMaterials'];
-const NUM_KEYS = new Set(['lensWidth', 'lensHeight', 'bridgeWidth', 'thickness', 'templeLength', 'templeSplay', 'lensOpacity', 'frameWrap', 'bridgeY', 'strapWidth', 'frameDepth', 'templeW', 'lowerCut', 'lowerThick', 'edgeFront', 'edgeBridge', 'edgeTemple', 'bridgeLift']);
+  'lensWidth', 'lensHeight', 'bridgeWidth', 'thickness', 'templeLength', 'templeSplay', 'lensOpacity', 'frameWrap', 'bridgeY', 'strap', 'strapMaterial', 'strapWidth', 'frameDepth', 'templeW', 'lower', 'lowerMaterial', 'lowerCut', 'lowerThick', 'edgeFront', 'edgeBridge', 'edgeTemple', 'bridgeLift', 'hingeType', 'hingeMaterial', 'hingeSize', 'templeFold', 'syncMaterials'];
+const NUM_KEYS = new Set(['lensWidth', 'lensHeight', 'bridgeWidth', 'thickness', 'templeLength', 'templeSplay', 'lensOpacity', 'frameWrap', 'bridgeY', 'strapWidth', 'frameDepth', 'templeW', 'lowerCut', 'lowerThick', 'edgeFront', 'edgeBridge', 'edgeTemple', 'bridgeLift', 'hingeSize', 'templeFold']);
 
 function exportCode() {
   const base = CODE_KEYS.map(k => `${k}=${NUM_KEYS.has(k) && k === 'bridgeY' ? state[k].toFixed(3) : state[k]}`);
@@ -1229,10 +1261,10 @@ function importCode(str) {
   let n = 0;
   str.split(/[;\n]+/).forEach(p => {
     const [k, ...r] = p.split('='), key = k && k.trim(), v = r.join('=').trim();
-    if (key === 'customPts') { state.customPts = v.split('|').map(s => s.split(',').map(parseFloat)); n++; return; }
+    if (key === 'customPts') { const q = v.split('|').map(s => s.split(',').map(parseFloat)).filter(p => p.length === 2 && p.every(isFinite)); if (q.length >= 6) { state.customPts = q; state.customW = null; n++; } return; }
     if (key === 'templeBend' || key === 'templeDrop') { state[key] = parseFloat(v); n++; return; }
     if (key === 'templeProf') { state.templeProf = v.split(',').map(parseFloat); n++; return; }
-    if (key === 'customW') { state.customW = v.split(',').map(parseFloat); n++; return; }
+    if (key === 'customW') { const W = v.split(',').map(parseFloat); if (state.customPts && W.length === state.customPts.length && W.every(isFinite)) { state.customW = W; n++; } return; }
     if (!CODE_KEYS.includes(key)) return;
     if (NUM_KEYS.has(key)) { if (isNaN(parseFloat(v))) return; state[key] = parseFloat(v); }
     else if (key === 'syncMaterials') state[key] = v === 'true';
@@ -1317,21 +1349,23 @@ function showToast(msg) {
 // =========================================================================
 let handleGroup = null, modelMode = null, dragH = null, selPt = 0;
 const MODE_INFO = {
-  pts: ['Contorno', 'Trascina i punti; selezionane uno e usa ＋ / − per aggiungerne o toglierne (bianco = selezionato)'],
+  pts: ['Contorno', 'Trascina i punti · con ＋/− scegli quanti punti usare (da 6 a 48)'],
   thick: ['Spessore', 'Trascina i punti rosa: più lontano = bordo più spesso'],
   asta: ['Aste', 'Viola: altezza sezione · giallo: dove piega · verde: caduta dietro l’orecchio'],
   size: ['Misure', 'Azzurro: lente · Verde: ponte · Arancio: asta']
 };
 
 function ensureCustom() {
-  if (state.customPts) return;
-  const q = SHAPE_PTS[state.shape];
-  if (q) state.customPts = q.map(p => p.slice());
-  else {
-    const w = state.lensWidth / 10, h = state.lensHeight / 10, P = lensPoints(state.shape, w, h);
-    state.customPts = [...Array(12).keys()].map(i => { const p = P[Math.floor(i * P.length / 12)]; return [p.x / (w / 2), p.y / (h / 2)]; });
+  if (!validPts(state.customPts)) state.customPts = null;
+  if (!state.customPts) {
+    const q = SHAPE_PTS[state.shape];
+    if (q) state.customPts = q.map(p => p.slice());
+    else {
+      const w = state.lensWidth / 10, h = state.lensHeight / 10, P = lensPoints(state.shape, w, h);
+      state.customPts = [...Array(12).keys()].map(i => { const p = P[Math.floor(i * P.length / 12)]; return [p.x / (w / 2), p.y / (h / 2)]; });
+    }
   }
-  state.customW = state.customPts.map(() => 1);
+  if (!state.customW || state.customW.length !== state.customPts.length) state.customW = state.customPts.map(() => 1);
 }
 
 // Peso dello spessore locale, interpolato per angolo attorno al centro della lente
@@ -1381,10 +1415,12 @@ function buildHandles() {
         const dx = p[0] - c[0], dy = p[1] - c[1], d = Math.hypot(dx * a, dy * b) || 1, r = rt * 0.9 * state.customW[i];
         x += (dx * a / d) * r; y += (dy * b / d) * r;
       }
-      add(mode, i, x, y, i === selPt ? 0xffffff : (mode === 'pts' ? 0xD4AF37 : 0xf472b6));
+      add(mode, i, x, y, mode === 'pts' ? 0xD4AF37 : 0xf472b6);
     });
+    const lab = document.getElementById('pt-count'); if (lab) lab.textContent = q.length + ' punti';
   } else if (mode === 'asta') {
     ensureTempleProf();
+    const lab2 = document.getElementById('pr-count'); if (lab2) lab2.textContent = state.templeProf.length + ' punti';
     const I = templeInfo(), off = I.T.w * state.templeW / 100 + 0.06, tu = tuOf(state.templeProf.length);
     const Dd = state.templeDrop != null ? state.templeDrop : I.T.drop, bz = Dd > 0 ? Math.min(state.templeBend != null ? state.templeBend : I.T.bend, 0.93) : 1;
     [1, -1].forEach(sd => {
@@ -1410,6 +1446,7 @@ function focusTemple() {
 
 function setModelMode(m) {
   dragH = null; if (typeof controls !== 'undefined') controls.enabled = true;
+  if (m) state.templeFold = 0;   // le maniglie presuppongono le aste aperte
   if (m && state.construction === 'shield' && (m === 'pts' || m === 'thick')) { m = 'size'; showToast('Il visore si modella da Misure e Aste'); }
   modelMode = m;
   if (m) {
@@ -1418,7 +1455,7 @@ function setModelMode(m) {
     state.autoRotate = false; document.getElementById('btn-autorotate').classList.remove('bg-brand-gold', 'text-black');
     if (m === 'asta') focusTemple(); else setCameraPreset(m === 'size' ? 'threequarter' : 'front');
   }
-  document.querySelectorAll('#model-bar [data-m]').forEach(b => {
+  document.querySelectorAll('#model-bar [data-m], #model-bar [data-for]').forEach(b => {
     const k = b.dataset.m, always = k === 'toggle' || k === 'tryon', f = b.dataset.for;
     b.classList.toggle('hidden', !always && (!m || (f && !f.split(' ').includes(m))));
     b.classList.toggle('bg-brand-gold', k === m); b.classList.toggle('text-black', k === m);
@@ -1443,11 +1480,8 @@ function initModeler() {
       <button data-m="toggle" class="${btn}"><i class="fa-solid fa-pen-ruler mr-1"></i>Modella</button>
       <button data-m="tryon" class="${btn}"><i class="fa-solid fa-camera mr-1"></i>Prova</button>
       ${Object.entries(MODE_INFO).map(([k, v]) => `<button data-m="${k}" class="${btn} hidden">${v[0]}</button>`).join('')}
-      <button data-m="p+" data-for="pts thick" class="${btn} hidden" title="Aggiungi un punto dopo quello selezionato">＋ punto</button>
-      <button data-m="p-" data-for="pts thick" class="${btn} hidden" title="Elimina il punto selezionato">− punto</button>
-      <button data-m="p2" data-for="pts thick" class="${btn} hidden" title="Raddoppia i punti">×2</button>
-      <button data-m="t+" data-for="asta" class="${btn} hidden" title="Più punti sul profilo dell’asta">＋ profilo</button>
-      <button data-m="t-" data-for="asta" class="${btn} hidden" title="Meno punti sul profilo dell’asta">− profilo</button>
+      <span data-for="pts thick" class="hidden flex items-center gap-1"><button data-m="p-" class="${btn}" title="Meno punti">−</button><span id="pt-count" class="text-[11px] text-slate-200 w-14 text-center">12 punti</span><button data-m="p+" class="${btn}" title="Più punti">＋</button></span>
+      <span data-for="asta" class="hidden flex items-center gap-1"><button data-m="t-" class="${btn}" title="Meno punti sul profilo">−</button><span id="pr-count" class="text-[11px] text-slate-200 w-14 text-center">5 punti</span><button data-m="t+" class="${btn}" title="Più punti sul profilo">＋</button></span>
       <button data-m="reset" class="${btn} hidden" title="Ripristina forma">↺</button>
       <span data-m="sep" class="hidden w-px h-4 bg-slate-600 mx-0.5"></span>
       ${[['front', 'Fronte'], ['side', 'Lato'], ['top', 'Alto'], ['3q', '3/4']].map(([k, n]) => `<button data-m="v:${k}" class="${btn} hidden">${n}</button>`).join('')}</div>
@@ -1459,8 +1493,8 @@ function initModeler() {
     else if (m === 'reset') resetModel();
     else if (m === 'sep') return;
     else if (m === 'tryon') toggleTryOn();
-    else if (m === 'p+') addPoint(); else if (m === 'p-') delPoint(); else if (m === 'p2') doublePoints();
-    else if (m === 't+') resampleProf(1); else if (m === 't-') resampleProf(-1);
+    else if (m === 'p+') stepPoints(1); else if (m === 'p-') stepPoints(-1);
+    else if (m === 't+') stepProf(1); else if (m === 't-') stepProf(-1);
     else if (m.startsWith('v:')) {
       const v = m.slice(2);
       if (v === 'side' && (modelMode === 'asta' || modelMode === 'size')) focusTemple();
@@ -1490,7 +1524,11 @@ function initModeler() {
     const kd = dragH.kind, pl = kd === 'temple' ? new THREE.Plane(V3(0, 1, 0), -hp.position.y) : (kd === 'tprof' || kd === 'tbend' || kd === 'tdrop') ? new THREE.Plane(V3(1, 0, 0), -hp.position.x) : new THREE.Plane(V3(0, 0, 1), -hp.position.z);
     if (!rc.ray.intersectPlane(pl, pt)) return;
     const w = state.lensWidth / 10, h = state.lensHeight / 10, bw = state.bridgeWidth / 10, a = w / 2, b = h / 2, cx = w / 2 + bw / 2, rt = state.thickness / 10, k = dragH.kind;
-    if (k === 'pts') state.customPts[dragH.i] = [clamp((pt.x - cx) / a, -1.5, 1.5), clamp(pt.y / b, -1.5, 1.5)];
+    if (k === 'pts') {   // il punto non può avvicinarsi troppo ai vicini (contorno che si incrocia = montatura rotta)
+      const q = state.customPts, n = q.length, i = dragH.i, nx = clamp((pt.x - cx) / a, -1.5, 1.5), ny = clamp(pt.y / b, -1.5, 1.5);
+      if ([(i + n - 1) % n, (i + 1) % n].some(j => Math.hypot(q[j][0] - nx, q[j][1] - ny) < 0.05)) return;
+      q[i] = [nx, ny];
+    }
     else if (k === 'thick') {
       const p = state.customPts[dragH.i];
       state.customW[dragH.i] = clamp(Math.hypot(pt.x - (cx + p[0] * a), pt.y - p[1] * b) / (rt * 0.9), 0.35, 2.8);
@@ -1515,36 +1553,25 @@ function initModeler() {
   window.addEventListener('pointerup', end); window.addEventListener('pointercancel', end);
 }
 
-// ---- Più punti di controllo: la nuova posizione è presa dalla curva, quindi la forma non cambia ----------------
-const curveOf = q => new THREE.CatmullRomCurve3(q.map(p => V3(p[0], p[1], 0)), true, 'centripetal');
-function addPoint() {
-  ensureCustom();
-  const q = state.customPts, W = state.customW, n = q.length;
-  if (n >= 48) return showToast('Massimo 48 punti');
-  const i = selPt % n, p = curveOf(q).getPoint((i + 0.5) / n);
-  q.splice(i + 1, 0, [p.x, p.y]); W.splice(i + 1, 0, (W[i] + W[(i + 1) % n]) / 2); selPt = i + 1;
+// ---- Numero di punti predefinito (scalini): il contorno viene ricampionato a distanza uniforme ----------------
+const PT_STEPS = [6, 8, 10, 12, 16, 20, 24, 32, 40, 48], PR_STEPS = [3, 5, 7, 9, 11];
+const nextStep = (list, cur, dir) => dir > 0 ? (list.find(v => v > cur) || list[list.length - 1]) : ([...list].reverse().find(v => v < cur) || list[0]);
+
+function stepPoints(dir) {
+  ensureCustom(); state.shape = 'custom';
+  const q = state.customPts, n = nextStep(PT_STEPS, q.length, dir);
+  if (n === q.length) return showToast(dir > 0 ? 'Massimo 48 punti' : 'Minimo 6 punti');
+  const wf = weightFn([1, 1], 1);                                  // pesi attuali, letti prima di cambiare il contorno
+  const pts = new THREE.CatmullRomCurve3(q.map(p => V3(p[0], p[1], 0)), true, 'centripetal').getSpacedPoints(n).slice(0, n);
+  state.customPts = pts.map(p => [p.x, p.y]);
+  state.customW = pts.map(p => wf({ x: p.x, y: p.y }));
   buildEyewear3D();
 }
-function delPoint() {
-  const q = state.customPts, W = state.customW;
-  if (!q || q.length <= 6) return showToast('Servono almeno 6 punti');
-  const i = selPt % q.length; q.splice(i, 1); W.splice(i, 1); selPt = Math.max(0, i - 1);
-  buildEyewear3D();
-}
-function doublePoints() {
-  ensureCustom();
-  const q = state.customPts, W = state.customW, n = q.length;
-  if (n * 2 > 48) return showToast('Massimo 48 punti');
-  const c = curveOf(q), nq = [], nw = [];
-  q.forEach((p, i) => { const m = c.getPoint((i + 0.5) / n); nq.push(p, [m.x, m.y]); nw.push(W[i], (W[i] + W[(i + 1) % n]) / 2); });
-  state.customPts = nq; state.customW = nw; selPt = (selPt * 2) % nq.length;
-  buildEyewear3D();
-}
-// Profilo dell'asta con più (o meno) punti, mantenendo la forma attuale
-function resampleProf(dir) {
+// Profilo dell'asta: stessi scalini, forma invariata
+function stepProf(dir) {
   ensureTempleProf();
-  const T = TEMPLES[state.templeStyle] || TEMPLES.curved, n = state.templeProf.length + dir;
-  if (n < 3 || n > 11) return showToast(n < 3 ? 'Servono almeno 3 punti' : 'Massimo 11 punti');
+  const T = TEMPLES[state.templeStyle] || TEMPLES.curved, n = nextStep(PR_STEPS, state.templeProf.length, dir);
+  if (n === state.templeProf.length) return showToast(dir > 0 ? 'Massimo 11 punti' : 'Minimo 3 punti');
   state.templeProf = tuOf(n).map(u => tempH(u, T));
   buildEyewear3D();
 }
@@ -1555,7 +1582,7 @@ function resampleProf(dir) {
 // PROVA CON WEBCAM: tracking del volto (MediaPipe Face Landmarker) + posa 3D
 // 1 unità del modello = 1 cm: la montatura viene posta a misura reale sul volto.
 // =========================================================================
-const TRY = { active: false, busy: false, fov: 50, mirror: true, lost: 0, last: -1, have: false, pos: new THREE.Vector3(), quat: new THREE.Quaternion(), landmarker: null };
+const TRY = { fit: false, active: false, busy: false, fov: 50, mirror: true, lost: 0, last: -1, have: false, pos: new THREE.Vector3(), quat: new THREE.Quaternion(), landmarker: null };
 const MP_VER = '0.10.14', MP_BASE = `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${MP_VER}`;
 Object.assign(state, { tryIPD: 63, tryY: 0, tryZ: 15, tryTilt: 6 });
 
@@ -1563,8 +1590,8 @@ function activeCamera() { return TRY.active ? TRY.cam : camera; }
 
 // ---- Calcolo della posa dai landmark (funzione pura, testabile) ---------------------------------------------
 // L: 478 landmark normalizzati; mat: matrice 4x4 di MediaPipe (o null); misure in px del canvas e del video.
-function headPose(L, mat, cw, ch, vw, vh, fovDeg, ipdCm) {
-  const sc = Math.max(cw / vw, ch / vh), dw = vw * sc, dh = vh * sc, ox = (cw - dw) / 2, oy = (ch - dh) / 2;
+function headPose(L, mat, cw, ch, vw, vh, fovDeg, ipdCm, fit) {
+  const sc = (fit ? Math.min : Math.max)(cw / vw, ch / vh), dw = vw * sc, dh = vh * sc, ox = (cw - dw) / 2, oy = (ch - dh) / 2;
   const f = (ch / 2) / Math.tan(fovDeg * Math.PI / 360), iR = 468, iL = 473;
   const px = i => ox + L[i].x * dw, py = i => oy + L[i].y * dh;
   const ipdPx = Math.hypot(px(iL) - px(iR), py(iL) - py(iR), (L[iL].z - L[iR].z) * dw) || 1;   // distanza 3D: indipendente dalla rotazione
@@ -1593,6 +1620,7 @@ async function startTryOn() {
   TRY.busy = true;
   try {
     if (typeof modelMode !== 'undefined' && modelMode) setModelMode(null);
+    if (state.templeFold) { state.templeFold = 0; buildEyewear3D(); }
     showToast('Avvio fotocamera…');
     TRY.stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false });
     const v = TRY.video = document.createElement('video');
@@ -1648,29 +1676,38 @@ function stopTryOn(silent) {
   TRY.active = false;
   const bar = document.getElementById('model-bar-wrap'); if (bar) bar.style.display = '';
   if (TRY.panel) { TRY.panel.remove(); TRY.panel = null; }
+  if (TRY.pill) { TRY.pill.remove(); TRY.pill = null; }
   if (!silent) showToast('Prova chiusa');
 }
 
-// ---- Pannello comandi ---------------------------------------------------------------------------------------
+// ---- Pannello comandi: colonna di pulsanti sul bordo destro (il viso resta libero), cursori in un cassetto -------
 function buildTryPanel() {
-  const p = TRY.panel = document.createElement('div');
-  p.className = 'absolute top-16 left-1/2 -translate-x-1/2 z-20 w-[min(92%,340px)] bg-slate-900/85 backdrop-blur-md p-3 rounded-xl border border-slate-700/60 shadow-xl space-y-2';
-  const sl = (k, l, min, max, u) => `<div><div class="flex justify-between text-[11px] text-slate-400"><span>${l}</span><span class="font-mono text-brand-gold" data-tv="${k}"></span></div><input type="range" class="w-full" data-tk="${k}" min="${min}" max="${max}" step="1" value="${state[k]}"></div>`;
-  p.innerHTML = `<div class="flex items-center justify-between gap-2">
-      <span class="text-xs font-bold text-brand-gold"><i class="fa-solid fa-camera mr-1"></i>Prova con webcam</span>
-      <div class="flex gap-1">
-        <button data-a="mirror" class="px-2 py-1 text-[11px] rounded-lg bg-slate-800 hover:bg-slate-700">Specchio</button>
-        <button data-a="photo" class="px-2 py-1 text-[11px] rounded-lg bg-slate-800 hover:bg-slate-700"><i class="fa-solid fa-image"></i> Foto</button>
-        <button data-a="close" class="px-2 py-1 text-[11px] rounded-lg bg-brand-gold text-black font-bold">✕</button></div></div>
-    <div id="try-status" class="text-[11px] text-slate-300">Cerco il viso…</div>
-    ${sl('tryIPD', 'Distanza pupillare (scala sul viso)', 54, 74, 'mm')}${sl('tryY', 'Altezza sul naso', -10, 10, 'mm')}${sl('tryZ', 'Distanza dagli occhi', 0, 30, 'mm')}${sl('tryTilt', 'Inclinazione', 0, 15, '°')}`;
-  document.getElementById('viewport-container').appendChild(p);
+  const c = document.getElementById('viewport-container'), p = TRY.panel = document.createElement('div');
+  p.className = 'absolute top-16 right-3 z-20 flex items-start gap-2';
+  const b = 'w-9 h-9 rounded-full bg-slate-900/80 backdrop-blur border border-slate-600/60 text-slate-100 hover:bg-brand-gold hover:text-black transition flex items-center justify-center text-sm shadow-lg';
+  const sl = (k, l, min, max) => `<div><div class="flex justify-between text-[11px] text-slate-400"><span>${l}</span><span class="font-mono text-brand-gold" data-tv="${k}"></span></div><input type="range" class="w-full" data-tk="${k}" min="${min}" max="${max}" step="1" value="${state[k]}"></div>`;
+  p.innerHTML = `<div id="try-drawer" class="hidden w-[200px] bg-slate-900/85 backdrop-blur-md p-3 rounded-xl border border-slate-700/60 shadow-xl space-y-2">
+      ${sl('tryIPD', 'Distanza pupillare', 54, 74)}${sl('tryY', 'Altezza sul naso', -10, 10)}${sl('tryZ', 'Distanza dagli occhi', 0, 30)}${sl('tryTilt', 'Inclinazione', 0, 15)}</div>
+    <div class="flex flex-col gap-2">
+      <button class="${b}" data-a="close" title="Chiudi"><i class="fa-solid fa-xmark"></i></button>
+      <button class="${b}" data-a="adjust" title="Regola la posizione"><i class="fa-solid fa-sliders"></i></button>
+      <button class="${b}" data-a="photo" title="Salva foto"><i class="fa-solid fa-image"></i></button>
+      <button class="${b}" data-a="mirror" title="Specchio"><i class="fa-solid fa-left-right"></i></button>
+      <button class="${b}" data-a="fit" title="Mostra tutta l’inquadratura"><i class="fa-solid fa-expand"></i></button></div>`;
+  c.appendChild(p);
+  const pill = TRY.pill = document.createElement('div');
+  pill.id = 'try-status'; pill.textContent = 'Cerco il viso…';
+  pill.className = 'absolute bottom-3 left-1/2 -translate-x-1/2 z-20 text-[11px] text-white bg-black/55 rounded-full px-3 py-1 pointer-events-none whitespace-nowrap';
+  c.appendChild(pill);
   const upd = () => p.querySelectorAll('[data-tv]').forEach(e => e.textContent = state[e.dataset.tv] + (e.dataset.tv === 'tryTilt' ? '°' : ' mm'));
   p.querySelectorAll('[data-tk]').forEach(i => i.oninput = () => { state[i.dataset.tk] = parseFloat(i.value); upd(); });
   upd();
-  p.querySelector('[data-a="close"]').onclick = () => stopTryOn();
-  p.querySelector('[data-a="photo"]').onclick = tryOnPhoto;
-  p.querySelector('[data-a="mirror"]').onclick = () => { TRY.mirror = !TRY.mirror; renderer.domElement.style.transform = TRY.mirror ? 'scaleX(-1)' : ''; };
+  const act = a => p.querySelector(`[data-a="${a}"]`);
+  act('close').onclick = () => stopTryOn();
+  act('adjust').onclick = () => document.getElementById('try-drawer').classList.toggle('hidden');
+  act('photo').onclick = tryOnPhoto;
+  act('mirror').onclick = () => { TRY.mirror = !TRY.mirror; renderer.domElement.style.transform = TRY.mirror ? 'scaleX(-1)' : ''; };
+  act('fit').onclick = () => { TRY.fit = !TRY.fit; showToast(TRY.fit ? 'Inquadratura completa' : 'Inquadratura a tutto schermo'); };
 }
 
 function tryOnPhoto() {
@@ -1692,7 +1729,7 @@ function tryOnTick() {
   if (Math.abs(TRY.cam.aspect - cw / ch) > 1e-3) { TRY.cam.aspect = cw / ch; TRY.cam.updateProjectionMatrix(); }
   const visH = 2 * 300 * Math.tan(THREE.MathUtils.degToRad(TRY.fov) / 2), visW = visH * cw / ch, va = v.videoWidth / v.videoHeight;
   let pw = visH * va, ph = visH;
-  if (pw < visW) { pw = visW; ph = visW / va; }
+  if (TRY.fit) { if (pw > visW) { pw = visW; ph = visW / va; } } else if (pw < visW) { pw = visW; ph = visW / va; }
   TRY.plane.scale.set(pw, ph, 1);
   if (v.currentTime === TRY.last) return;
   TRY.last = v.currentTime;
@@ -1705,7 +1742,7 @@ function tryOnTick() {
   }
   TRY.lost = 0;
   const M = r.facialTransformationMatrixes && r.facialTransformationMatrixes[0];
-  const P = headPose(L, M ? M.data : null, cw, ch, v.videoWidth, v.videoHeight, TRY.fov, state.tryIPD / 10);
+  const P = headPose(L, M ? M.data : null, cw, ch, v.videoWidth, v.videoHeight, TRY.fov, state.tryIPD / 10, TRY.fit);
   const basis = new THREE.Matrix4().makeBasis(P.x, P.y, P.z), q = new THREE.Quaternion().setFromRotationMatrix(basis);
   const off = new THREE.Vector3(0, state.tryY / 10, state.tryZ / 10).applyQuaternion(q);
   const target = P.mid.clone().add(off);
